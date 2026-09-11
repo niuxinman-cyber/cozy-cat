@@ -1,5 +1,26 @@
-const CACHE = "cozy-cat-cute-v2";
+const CACHE = "cozy-cat-cute-v3";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+
+const HIDE_REMINDER_STYLE = `<style id="hide-mobile-reminder">
+.page[data-page="me"] > .card.section:nth-of-type(3){display:none !important;}
+</style>`;
+
+async function decorateNavigationResponse(response) {
+  if (!response || !response.ok) return response;
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) return response;
+
+  const html = await response.text();
+  const patched = html.includes('id="hide-mobile-reminder"')
+    ? html
+    : html.replace("</head>", HIDE_REMINDER_STYLE + "\n</head>");
+
+  return new Response(patched, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers
+  });
+}
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
@@ -17,15 +38,17 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
 
   if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put("./index.html", copy));
-          return response;
-        })
-        .catch(() => caches.match("./index.html"))
-    );
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(event.request);
+        const copy = response.clone();
+        caches.open(CACHE).then(cache => cache.put("./index.html", copy));
+        return await decorateNavigationResponse(response);
+      } catch (err) {
+        const cached = await caches.match("./index.html");
+        return await decorateNavigationResponse(cached);
+      }
+    })());
     return;
   }
 
