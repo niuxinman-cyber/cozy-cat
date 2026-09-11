@@ -1,21 +1,25 @@
-const CACHE = "cozy-cat-cute-v3";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const CACHE = "cozy-cat-cute-v4";
+const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./save-guard.js"];
 
 const HIDE_REMINDER_STYLE = `<style id="hide-mobile-reminder">
 .page[data-page="me"] > .card.section:nth-of-type(3){display:none !important;}
 </style>`;
+const SAVE_GUARD_SCRIPT = `<script id="cozy-save-guard" src="./save-guard.js"></script>`;
 
 async function decorateNavigationResponse(response) {
   if (!response || !response.ok) return response;
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("text/html")) return response;
 
-  const html = await response.text();
-  const patched = html.includes('id="hide-mobile-reminder"')
-    ? html
-    : html.replace("</head>", HIDE_REMINDER_STYLE + "\n</head>");
+  let html = await response.text();
+  if (!html.includes('id="hide-mobile-reminder"')) {
+    html = html.replace("</head>", HIDE_REMINDER_STYLE + "\n</head>");
+  }
+  if (!html.includes('id="cozy-save-guard"')) {
+    html = html.replace("</head>", SAVE_GUARD_SCRIPT + "\n</head>");
+  }
 
-  return new Response(patched, {
+  return new Response(html, {
     status: response.status,
     statusText: response.statusText,
     headers: response.headers
