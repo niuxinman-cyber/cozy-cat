@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" role="img" aria-label="cute tuxedo kitten">
+<defs><filter id="s" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#6b4d39" flood-opacity=".18"/></filter><radialGradient id="eye" cx="40%" cy="35%"><stop offset="0" stop-color="#d9a25f"/><stop offset=".65" stop-color="#8b5b31"/><stop offset="1" stop-color="#3b2418"/></radialGradient></defs>
+<g filter="url(#s)">
+<ellipse cx="300" cy="412" rx="205" ry="42" fill="#8b684c" opacity=".14"/>
+<path d="M158 184 C120 115 124 70 151 55 C184 74 208 101 225 133 Z" fill="#252326"/><path d="M442 184 C480 115 476 70 449 55 C416 74 392 101 375 133 Z" fill="#252326"/>
+<ellipse cx="300" cy="283" rx="178" ry="164" fill="#262427"/>
+<ellipse cx="300" cy="296" rx="132" ry="138" fill="#fbf7f0"/>
+<path d="M169 225 C183 142 230 112 300 112 C370 112 417 142 431 225 C391 187 365 180 342 189 C319 198 281 198 258 189 C235 180 209 187 169 225Z" fill="#252326"/>
+<path d="M214 339 C222 408 264 445 300 445 C336 445 378 408 386 339 C360 356 334 364 300 364 C266 364 240 356 214 339Z" fill="#252326"/>
+<ellipse cx="233" cy="257" rx="47" ry="58" fill="#fffaf4"/><ellipse cx="367" cy="257" rx="47" ry="58" fill="#fffaf4"/>
+<ellipse cx="233" cy="258" rx="31" ry="38" fill="url(#eye)"/><ellipse cx="367" cy="258" rx="31" ry="38" fill="url(#eye)"/>
+<ellipse cx="224" cy="244" rx="10" ry="13" fill="#fff" opacity=".9"/><ellipse cx="358" cy="244" rx="10" ry="13" fill="#fff" opacity=".9"/>
+<ellipse cx="243" cy="269" rx="8" ry="12" fill="#201510"/><ellipse cx="377" cy="269" rx="8" ry="12" fill="#201510"/>
+<ellipse cx="211" cy="320" rx="34" ry="18" fill="#f3aaa7" opacity=".55"/><ellipse cx="389" cy="320" rx="34" ry="18" fill="#f3aaa7" opacity=".55"/>
+<path d="M285 306 Q300 292 315 306 Q300 324 285 306Z" fill="#e79896"/><path d="M300 319 Q291 331 278 330 M300 319 Q309 331 322 330" fill="none" stroke="#725348" stroke-width="7" stroke-linecap="round"/>
+<path d="M260 326 C222 326 197 320 171 309 M260 340 C218 345 193 349 165 361 M340 326 C378 326 403 320 429 309 M340 340 C382 345 407 349 435 361" fill="none" stroke="#7c685d" stroke-width="4" stroke-linecap="round" opacity=".8"/>
+<ellipse cx="221" cy="399" rx="68" ry="35" fill="#fbf7f0"/><ellipse cx="379" cy="399" rx="68" ry="35" fill="#fbf7f0"/>
+<path d="M186 401 Q221 382 256 401" fill="none" stroke="#e8ded4" stroke-width="5"/><path d="M344 401 Q379 382 414 401" fill="none" stroke="#e8ded4" stroke-width="5"/>
+</g></svg>
