@@ -1,6 +1,7 @@
-const CACHE = "cozy-cat-cute-v5";
+const CACHE = "cozy-cat-cute-v6";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./save-guard.js"];
-const SAVE_GUARD_SCRIPT = `<script src="./save-guard.js"></script>`;
+const SAVE_GUARD_SCRIPT = `<script src="./save-guard.js?v=6"></script>`;
+const SAVE_GUARD_LOADER = `\n;(()=>{if(!document.querySelector('script[data-save-guard]')){const s=document.createElement('script');s.src='./save-guard.js?v=6';s.dataset.saveGuard='1';document.head.appendChild(s);}})();\n`;
 
 async function decorateNavigationResponse(response) {
   if (!response || !response.ok) return response;
@@ -23,6 +24,20 @@ async function decorateNavigationResponse(response) {
   });
 }
 
+async function decorateAppScript(response) {
+  if (!response || !response.ok) return response;
+  const text = await response.text();
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  headers.set("content-type", "application/javascript; charset=utf-8");
+  return new Response(text + SAVE_GUARD_LOADER, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
   self.skipWaiting();
@@ -34,7 +49,6 @@ self.addEventListener("activate", event => {
     await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
 
-    // Reload already-open windows once so the new save guard is applied immediately.
     const windows = await self.clients.matchAll({type: "window", includeUncontrolled: true});
     for (const client of windows) {
       try { await client.navigate(client.url); } catch (_) {}
@@ -44,6 +58,8 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+
+  const url = new URL(event.request.url);
 
   if (event.request.mode === "navigate") {
     event.respondWith((async () => {
@@ -55,6 +71,19 @@ self.addEventListener("fetch", event => {
       } catch (err) {
         const cached = await caches.match("./index.html");
         return await decorateNavigationResponse(cached);
+      }
+    })());
+    return;
+  }
+
+  if (url.pathname.endsWith("/app.js")) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(event.request, {cache: "no-store"});
+        return await decorateAppScript(response);
+      } catch (err) {
+        const cached = await caches.match(event.request);
+        return cached ? decorateAppScript(cached) : Response.error();
       }
     })());
     return;
