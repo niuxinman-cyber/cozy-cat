@@ -1,5 +1,5 @@
-const CACHE = "cozy-cat-cute-v8";
-const ASSETS = ["./", "./index.html", "./style.css", "./app.js", "./save-guard.js", "./legacy.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const CACHE = "cozy-cat-cute-v10";
+const ASSETS = ["./", "./index.html", "./style.css", "./app.js", "./words.js", "./save-guard.js", "./legacy.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
