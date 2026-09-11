@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7efe6">
+<title>Cozy Cat Desk Mobile v2</title>
+<link rel="stylesheet" href="style.css">
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cozy Cat Deutsch">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <div class="brand">Good German<br>Better You</div>
+      <div class="brand-sub">和猫猫一起，把德语变成更好的自己 ♡</div>
+    </div>
+    <div class="icon-row">
+      <button class="icon-btn" id="toQuizBtn" type="button">📝</button>
+      <button class="icon-btn" id="toRewardsBtn" type="button">🎒</button>
+    </div>
+  </div>
+
+  <main>
+    <section class="page active" data-page="home">
+      <section class="card hero">
+        <div class="room">
+          <div class="room-light"></div>
+          <div class="window"></div>
+          <div class="leaf l1"></div>
+          <div class="leaf l2"></div>
+          <div class="rug"></div>
+          <div class="cushion"></div>
+
+          <div class="cat-zone">
+            <div id="catWrap" class="cat-wrap">
+              <img id="cat" class="cat-img" src="cat.webp" alt="猫猫">
+              <div class="eyes"></div>
+            </div>
+          </div>
+
+          <div id="speech" class="speech">欢迎回来！<br>先签到，再和我一起学 20 个德福词吧。♡</div>
+
+          <div class="quick-float">
+            <button class="float-btn" id="floatRewardsBtn" type="button">🎒 零食背包</button>
+            <button class="float-btn" id="floatQuizBtn" type="button">📝 今日小测验</button>
+          </div>
+
+          <div class="floor"></div>
+        </div>
+
+        <div class="actions">
+          <button class="action-btn a1" id="petBtn" type="button">
+            <div class="emoji">🐾</div><div class="title">摸摸它</div><div class="hint">+5 心情</div>
+          </button>
+          <button class="action-btn a2" id="quickFeedBtn" type="button">
+            <div class="emoji">🍲</div><div class="title">喂饭</div><div class="hint">自动选奖励</div>
+          </button>
+          <button class="action-btn a3" id="workBtn" type="button">
+            <div class="emoji">💻</div><div class="title">假装工作</div><div class="hint">+10 专注</div>
+          </button>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2 class="section-title">💗 今日状态</h2>
+        <div class="status-grid">
+          <div class="mini-card">
+            <div class="mini-head"><span class="mini-icon">😊</span> 心情</div>
+            <div id="moodNum" class="stat-number">80%</div>
+            <div class="bar"><div id="moodBar" class="fill mood"></div></div>
+            <div class="stat-note">今天也很棒！♡</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-head"><span class="mini-icon">🍮</span> 饱腹</div>
+            <div id="foodNum" class="stat-number">60%</div>
+            <div class="bar"><div id="foodBar" class="fill full"></div></div>
+            <div class="stat-note">再来点好吃的吧～</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-head"><span class="mini-icon">🐟</span> 摸鱼值</div>
+            <div id="fishNum" class="stat-number">30%</div>
+            <div class="bar"><div id="fishBar" class="fill fish"></div></div>
+            <div class="stat-note">工作什么的…明天再说。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="split-grid">
+        <div class="card section">
+          <div class="small-title">📅 每日签到 <span id="checkinState" class="badge">今天还没签到</span></div>
+          <div><span id="streakNumber" class="streak">0</span> <span style="font-weight:900">天连续学习</span></div>
+          <div id="checkinMeta" class="meta">签到会获得牛奶；连续 3 / 7 / 14 天还有鸡腿 / 蛋糕 / 牛肉。</div>
+          <button id="checkinBtn" class="subbtn checkin-btn" type="button">今日签到 ♡</button>
+        </div>
+
+        <div class="card section">
+          <div class="small-title">🐈 猫猫今日事件</div>
+          <div class="event-box">
+            <div id="dailyEventText">猫猫还在想今天要干嘛……</div>
+            <div id="dailyEventEffect" class="event-effect"></div>
+          </div>
+          <button id="eventBtn" class="subbtn event-btn" type="button">看看今日事件</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="page" data-page="study">
+      <section class="card section">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div>
+            <h2 class="section-title" style="margin-bottom:0">📘 今日 20 个德福精选词</h2>
+            <div class="helper">学满之后拿奖励，再去喂猫吧。♡</div>
+          </div>
+          <div class="count-pill"><span id="learnedCount">0</span>/20</div>
+        </div>
+
+        <div class="progress"><div id="progressFill" style="width:0%"></div></div>
+
+        <div class="reward-preview">
+          <div class="r-item"><div class="em">🥛</div><div class="nm">牛奶</div><div id="miniMilk" class="ct">0</div></div>
+          <div class="r-item"><div class="em">🍗</div><div class="nm">鸡腿</div><div id="miniChicken" class="ct">0</div></div>
+          <div class="r-item"><div class="em">🍰</div><div class="nm">蛋糕</div><div id="miniCake" class="ct">0</div></div>
+          <div class="r-item"><div class="em">🥩</div><div class="nm">牛肉</div><div id="miniBeef" class="ct">0</div></div>
+        </div>
+
+        <div id="wordList" class="list"></div>
+        <div id="remainingNote" class="center-note">……还有 20 个单词等着你！♡</div>
+
+        <div class="large-buttons">
+          <button class="large-btn lb1" id="openQuizFromStudy" type="button">
+            <div class="big">📝 今日小测验</div>
+            <div class="small">检验一下学习成果吧！</div>
+          </button>
+          <button class="large-btn lb2" id="openRewardsFromStudy" type="button">
+            <div class="big">🎒 零食背包</div>
+            <div class="small">用努力兑换猫猫零食！</div>
+          </button>
+        </div>
+      </section>
+    </section>
+
+    <section class="page" data-page="cat">
+      <section class="card section">
+        <h2 class="section-title">🐾 猫猫互动中心</h2>
+        <div class="helper">在这里可以直接喂小猫、看库存、看看它今天过得怎么样。</div>
+      </section>
+
+      <section class="card section">
+        <div class="small-title">🎒 当前零食库存</div>
+        <div class="feed-grid" id="feedGrid">
+          <div class="reward-card">
+            <div class="reward-emoji">🥛</div>
+            <div class="reward-name">牛奶</div>
+            <div id="countMilk" class="reward-count">0</div>
+            <button type="button" data-feed="milk">喂小猫</button>
+          </div>
+          <div class="reward-card">
+            <div class="reward-emoji">🍗</div>
+            <div class="reward-name">鸡腿</div>
+            <div id="countChicken" class="reward-count">0</div>
+            <button type="button" data-feed="chicken">喂小猫</button>
+          </div>
+          <div class="reward-card">
+            <div class="reward-emoji">🍰</div>
+            <div class="reward-name">蛋糕</div>
+            <div id="countCake" class="reward-count">0</div>
+            <button type="button" data-feed="cake">喂小猫</button>
+          </div>
+          <div class="reward-card">
+            <div class="reward-emoji">🥩</div>
+            <div class="reward-name">牛肉</div>
+            <div id="countBeef" class="reward-count">0</div>
+            <button type="button" data-feed="beef">喂小猫</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <div class="small-title">📌 猫猫小档案</div>
+        <div class="stats-two">
+          <div class="info-box">
+            <div class="helper">已学单词</div>
+            <div id="profileWords" class="big-num">0</div>
+          </div>
+          <div class="info-box">
+            <div class="helper">连续签到</div>
+            <div id="profileStreak" class="big-num">0 天</div>
+          </div>
+          <div class="info-box">
+            <div class="helper">总库存</div>
+            <div id="profileInventory" class="big-num">0</div>
+          </div>
+          <div class="info-box">
+            <div class="helper">今日状态</div>
+            <div id="profileMood" class="big-num">开心</div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="page" data-page="me">
+      <section class="card section">
+        <h2 class="section-title">📊 我的学习</h2>
+        <div class="helper">这是一个简单的汇总页，方便你在手机上快速查看今天的进度。</div>
+      </section>
+      <section class="card section">
+        <div class="stats-two">
+          <div class="info-box">
+            <div class="helper">今日完成</div>
+            <div id="sumWords" class="big-num">0 / 20</div>
+          </div>
+          <div class="info-box">
+            <div class="helper">今天签到</div>
+            <div id="sumCheckin" class="big-num">未签到</div>
+          </div>
+          <div class="info-box">
+            <div class="helper">今日小测奖励</div>
+            <div id="sumQuiz" class="big-num">未领取</div>
+          </div>
+          <div class="info-box">
+            <div class="helper">小猫今天</div>
+            <div id="sumCat" class="big-num">很可爱</div>
+          </div>
+        </div>
+      </section>
+      <section class="card section">
+        <div class="small-title">💡 小提醒</div>
+        <div class="helper">
+          这个手机版已经做成了真正分页的单页 App：<br>
+          首页 / 学习 / 猫猫 / 我的 都可以通过底部导航切换。<br>
+          这次还修复了手机上点击无反应的问题：现在所有按钮都使用了明确的事件绑定，不再依赖浏览器对 id 的隐式全局支持。
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div id="quizOverlay" class="overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">📝 今日 5 题小测验</div>
+      <button class="close" id="closeQuizBtn" type="button">✕</button>
+    </div>
+    <div class="helper">当天第一次完成且答对 3 / 4 / 5 题，会获得牛奶 / 鸡腿 / 蛋糕奖励。</div>
+    <div class="quiz-progress"><div id="quizProgressFill" style="width:0%"></div></div>
+    <div id="quizScoreLabel" class="helper" style="margin-bottom:8px">还没开始</div>
+    <div id="quizStage" class="quiz-stage">
+      <div class="quiz-result">
+        <div style="font-size:34px">🐾</div>
+        学完几个词以后来测一下吧。<br>
+        <button class="subbtn event-btn" id="startQuizBtn" type="button" style="max-width:240px">开始 5 题小测验</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="rewardOverlay" class="overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">🎒 猫猫零食背包</div>
+      <button class="close" id="closeRewardBtn" type="button">✕</button>
+    </div>
+    <div class="helper" style="margin-bottom:10px">收集这些奖励，再喂给小猫吧！♡</div>
+
+    <div class="feed-grid" id="sheetFeedGrid">
+      <div class="reward-card">
+        <div class="reward-emoji">🥛</div>
+        <div class="reward-name">牛奶</div>
+        <div id="sheetCountMilk" class="reward-count">0</div>
+        <button type="button" data-feed="milk">喂小猫</button>
+      </div>
+      <div class="reward-card">
+        <div class="reward-emoji">🍗</div>
+        <div class="reward-name">鸡腿</div>
+        <div id="sheetCountChicken" class="reward-count">0</div>
+        <button type="button" data-feed="chicken">喂小猫</button>
+      </div>
+      <div class="reward-card">
+        <div class="reward-emoji">🍰</div>
+        <div class="reward-name">蛋糕</div>
+        <div id="sheetCountCake" class="reward-count">0</div>
+        <button type="button" data-feed="cake">喂小猫</button>
+      </div>
+      <div class="reward-card">
+        <div class="reward-emoji">🥩</div>
+        <div class="reward-name">牛肉</div>
+        <div id="sheetCountBeef" class="reward-count">0</div>
+        <button type="button" data-feed="beef">喂小猫</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button class="nav-item active" type="button" data-nav="home"><div class="ic">🏠</div><div>首页</div></button>
+  <button class="nav-item" type="button" data-nav="study"><div class="ic">🎓</div><div>学习</div></button>
+  <button class="nav-item" type="button" data-nav="cat"><div class="ic">🐾</div><div>猫猫</div></button>
+  <button class="nav-item" type="button" data-nav="me"><div class="ic">📊</div><div>我的</div></button>
+</nav>
+
+<script src="app.js" defer></script>
+
+
+
+</body>
+</html>
