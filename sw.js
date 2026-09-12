@@ -1,10 +1,7 @@
-const CACHE = "cozy-cat-cute-v12";
+const CACHE = "cozy-cat-cute-v13";
 const ASSETS = [
-  "./", "./index.html", "./style.css", "./app.js", "./words.js", "./save-guard.js", "./legacy.html",
-  "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
-  "./cat-anim.js", "./cat-anim.css",
-  "./assets/cat-idle.webp", "./assets/cat-happy.webp", "./assets/cat-hungry.webp",
-  "./assets/cat-sleep.webp", "./assets/cat-eat.webp", "./assets/cat-celebrate.webp"
+  "./", "./index.html", "./style.css", "./app.js", "./app-core.js", "./words.js", "./save-guard.js", "./legacy.html",
+  "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./cat-anim.js", "./cat-anim.css", "./assets/cat-sprite.webp"
 ];
 
 const LEARNING_MIGRATION_FIX = `(()=>{try{
@@ -48,71 +45,23 @@ const LEARNING_MIGRATION_FIX = `(()=>{try{
   localStorage.setItem(marker,'1');
 }catch(_){}})();\n`;
 
-const CAT_ANIMATION_LOADER = `import('./cat-anim.js').catch(()=>{});\n`;
-
 async function decorateApp(response){
-  if(!response || !response.ok) return response;
+  if(!response||!response.ok)return response;
   const text=await response.text();
   const headers=new Headers(response.headers);
-  headers.delete("content-length");
-  headers.delete("content-encoding");
-  headers.set("content-type","application/javascript; charset=utf-8");
-  return new Response(LEARNING_MIGRATION_FIX+CAT_ANIMATION_LOADER+text,{status:response.status,statusText:response.statusText,headers});
+  headers.delete('content-length');headers.delete('content-encoding');headers.set('content-type','application/javascript; charset=utf-8');
+  return new Response(LEARNING_MIGRATION_FIX+text,{status:response.status,statusText:response.statusText,headers});
 }
-
-self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", event => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
-    await self.clients.claim();
-    const windows = await self.clients.matchAll({type:"window", includeUncontrolled:true});
-    for (const client of windows) {
-      try { await client.navigate(client.url); } catch (_) {}
-    }
-  })());
-});
-
-self.addEventListener("fetch", event => {
-  if(event.request.method !== "GET") return;
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
+self.addEventListener('activate',event=>{event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim();const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});for(const client of windows){try{await client.navigate(client.url)}catch(_){}}})())});
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
-
-  if(event.request.mode === "navigate"){
-    event.respondWith((async()=>{
-      try{
-        const response = await fetch(event.request,{cache:"no-store"});
-        const copy = response.clone();
-        caches.open(CACHE).then(cache=>cache.put("./index.html",copy));
-        return response;
-      }catch(_){
-        return (await caches.match("./index.html")) || Response.error();
-      }
-    })());
-    return;
+  if(event.request.mode==='navigate'){
+    event.respondWith((async()=>{try{const response=await fetch(event.request,{cache:'no-store'});const copy=response.clone();caches.open(CACHE).then(cache=>cache.put('./index.html',copy));return response}catch(_){return(await caches.match('./index.html'))||Response.error()}})());return;
   }
-
   if(url.pathname.endsWith('/app.js')){
-    event.respondWith((async()=>{
-      try{
-        const response=await fetch(event.request,{cache:"no-store"});
-        return await decorateApp(response);
-      }catch(_){
-        const cached=(await caches.match(event.request))||(await caches.match('./app.js'));
-        return cached?decorateApp(cached):Response.error();
-      }
-    })());
-    return;
+    event.respondWith((async()=>{try{return await decorateApp(await fetch(event.request,{cache:'no-store'}))}catch(_){const cached=(await caches.match(event.request))||(await caches.match('./app.js'));return cached?decorateApp(cached):Response.error()}})());return;
   }
-
-  event.respondWith(
-    fetch(event.request,{cache:"no-store"}).then(response=>{
-      const copy=response.clone();
-      caches.open(CACHE).then(cache=>cache.put(event.request,copy));
-      return response;
-    }).catch(()=>caches.match(event.request))
-  );
+  event.respondWith(fetch(event.request,{cache:'no-store'}).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request)));
 });
