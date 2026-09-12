@@ -1,4 +1,4 @@
-const CACHE = "cozy-cat-cute-v15";
+const CACHE = "cozy-cat-cute-v16";
 const ASSETS = [
   "./", "./index.html", "./style.css", "./app.js", "./app-core.js", "./words.js", "./save-guard.js", "./legacy.html",
   "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./cat-anim.js", "./cat-anim.css",
