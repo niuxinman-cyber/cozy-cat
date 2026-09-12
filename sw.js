@@ -1,5 +1,11 @@
-const CACHE = "cozy-cat-cute-v11";
-const ASSETS = ["./", "./index.html", "./style.css", "./app.js", "./words.js", "./save-guard.js", "./legacy.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const CACHE = "cozy-cat-cute-v12";
+const ASSETS = [
+  "./", "./index.html", "./style.css", "./app.js", "./words.js", "./save-guard.js", "./legacy.html",
+  "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
+  "./cat-anim.js", "./cat-anim.css",
+  "./assets/cat-idle.webp", "./assets/cat-happy.webp", "./assets/cat-hungry.webp",
+  "./assets/cat-sleep.webp", "./assets/cat-eat.webp", "./assets/cat-celebrate.webp"
+];
 
 const LEARNING_MIGRATION_FIX = `(()=>{try{
   const marker='cozyV11LegacyLearningFixed';
@@ -42,6 +48,8 @@ const LEARNING_MIGRATION_FIX = `(()=>{try{
   localStorage.setItem(marker,'1');
 }catch(_){}})();\n`;
 
+const CAT_ANIMATION_LOADER = `import('./cat-anim.js').catch(()=>{});\n`;
+
 async function decorateApp(response){
   if(!response || !response.ok) return response;
   const text=await response.text();
@@ -49,7 +57,7 @@ async function decorateApp(response){
   headers.delete("content-length");
   headers.delete("content-encoding");
   headers.set("content-type","application/javascript; charset=utf-8");
-  return new Response(LEARNING_MIGRATION_FIX+text,{status:response.status,statusText:response.statusText,headers});
+  return new Response(LEARNING_MIGRATION_FIX+CAT_ANIMATION_LOADER+text,{status:response.status,statusText:response.statusText,headers});
 }
 
 self.addEventListener("install", event => {
