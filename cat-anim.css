@@ -1,9 +1,9 @@
-/* Cat state layer v21: original-resolution art + crisp mobile rendering. */
+/* Cat state layer v23: clearer breathing motion while keeping sharp mobile rendering. */
 .cat-zone{
   width:min(190px,58%)!important;
   top:54.2%!important;
 }
-.cat-wrap{transform-origin:center bottom;overflow:visible}
+.cat-wrap{transform-origin:center bottom;overflow:visible;will-change:transform}
 .cat-wrap .eyes{display:none}
 .cat-img{
   display:block;
@@ -22,24 +22,40 @@
 /* Sleeping pose is naturally wider; keep it broad enough to sit in the middle of the cushion. */
 .cat-wrap.state-sleep .cat-img{width:97%!important;max-width:97%!important}
 
-.cat-wrap.state-idle{animation:catIdleBreath 3.4s ease-in-out infinite}
-.cat-wrap.state-happy{animation:catHappyBreath 2.8s ease-in-out infinite}
-.cat-wrap.state-hungry{animation:catHungryBreath 3.9s ease-in-out infinite}
-.cat-wrap.state-idle.mood-mid{animation:catIdleBreath 4.5s ease-in-out infinite}
-.cat-wrap.state-idle.mood-low{animation:catLowMoodBreath 5.5s ease-in-out infinite}
-.cat-wrap.state-idle.mood-very-low{animation:catVeryLowMoodBreath 6.5s ease-in-out infinite}
-.cat-wrap.state-sleep{animation:catSleepBreath 4.8s ease-in-out infinite}
+/* Keep the motion visible without scaling the bitmap, which can make Safari render it softly. */
+.cat-wrap.state-idle{animation:catIdleBreath 3s ease-in-out infinite}
+.cat-wrap.state-happy{animation:catHappyBreath 2.45s ease-in-out infinite}
+.cat-wrap.state-hungry{animation:catHungryBreath 3.2s ease-in-out infinite}
+.cat-wrap.state-idle.mood-mid{animation:catIdleBreath 4s ease-in-out infinite}
+.cat-wrap.state-idle.mood-low{animation:catLowMoodBreath 4.8s ease-in-out infinite}
+.cat-wrap.state-idle.mood-very-low{animation:catVeryLowMoodBreath 5.8s ease-in-out infinite}
+.cat-wrap.state-sleep{animation:catSleepBreath 3.8s ease-in-out infinite}
 .cat-wrap.state-eat,.cat-wrap.state-eat.eating{animation:catEatNibble .62s ease-in-out infinite!important}
 .cat-wrap.state-celebrate{animation:catCelebrate 1.08s cubic-bezier(.2,.82,.24,1) both}
 .cat-wrap.petting{animation:catPetBounce .68s ease-in-out!important}
 
-/* Continuous states use position-only motion. Avoiding scale prevents Safari from re-rasterizing the cat softly. */
-@keyframes catIdleBreath{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-@keyframes catHappyBreath{0%,100%{transform:translateY(0)}42%{transform:translateY(-3px)}58%{transform:translateY(-2px)}}
-@keyframes catHungryBreath{0%,100%{transform:translateY(0)}48%{transform:translateY(-1px)}62%{transform:translateY(1px)}}
-@keyframes catLowMoodBreath{0%,100%{transform:translateY(2px)}50%{transform:translateY(1px)}}
-@keyframes catVeryLowMoodBreath{0%,100%{transform:translateY(3px)}50%{transform:translateY(2px)}}
-@keyframes catSleepBreath{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
+@keyframes catIdleBreath{
+  0%,100%{transform:translateY(1px) rotate(0deg)}
+  44%{transform:translateY(-4px) rotate(-.12deg)}
+  58%{transform:translateY(-3px) rotate(.08deg)}
+}
+@keyframes catHappyBreath{
+  0%,100%{transform:translateY(1px) rotate(0deg)}
+  38%{transform:translateY(-5px) rotate(-.18deg)}
+  58%{transform:translateY(-3px) rotate(.16deg)}
+}
+@keyframes catHungryBreath{
+  0%,100%{transform:translateY(1px) rotate(0deg)}
+  34%{transform:translateY(-2px) rotate(-.12deg)}
+  50%{transform:translateY(1px) rotate(.12deg)}
+  66%{transform:translateY(-2px) rotate(-.08deg)}
+}
+@keyframes catLowMoodBreath{0%,100%{transform:translateY(2px)}50%{transform:translateY(-1px)}}
+@keyframes catVeryLowMoodBreath{0%,100%{transform:translateY(3px)}50%{transform:translateY(1px)}}
+@keyframes catSleepBreath{
+  0%,100%{transform:translateY(1px)}
+  50%{transform:translateY(-3px)}
+}
 @keyframes catEatNibble{0%,100%{transform:translateY(0) rotate(0) scale(1)}28%{transform:translateY(2px) rotate(-1deg) scale(1.012)}55%{transform:translateY(-1px) rotate(.8deg) scale(1.006)}78%{transform:translateY(2px) rotate(-.5deg) scale(1.014)}}
 @keyframes catCelebrate{0%{transform:translateY(0) scale(1)}26%{transform:translateY(-13px) rotate(-2deg) scale(1.035)}48%{transform:translateY(1px) rotate(1.5deg) scale(.995)}67%{transform:translateY(-6px) rotate(-1deg) scale(1.018)}100%{transform:translateY(0) rotate(0) scale(1)}}
 @keyframes catPetBounce{0%,100%{transform:translateY(0) scale(1)}38%{transform:translateY(-6px) scale(1.028)}66%{transform:translateY(-2px) scale(1.016)}}
@@ -50,6 +66,6 @@
 }
 
 @media(prefers-reduced-motion:reduce){
-  .cat-wrap.state-idle,.cat-wrap.state-happy,.cat-wrap.state-hungry,.cat-wrap.state-sleep{animation-duration:7s}
+  .cat-wrap.state-idle,.cat-wrap.state-happy,.cat-wrap.state-hungry,.cat-wrap.state-sleep{animation-duration:8s}
   .cat-wrap.state-eat,.cat-wrap.state-celebrate,.cat-wrap.petting{animation:none!important}
 }
