@@ -78,12 +78,23 @@ const state={mood:+(localStorage.getItem('cozy9Mood')||80),full:+(localStorage.g
 function normalizeState(){state.mood=clamp(state.mood);state.full=clamp(state.full);state.fish=clamp(state.fish)}
 function save(){normalizeState();localStorage.setItem('cozy9Mood',state.mood);localStorage.setItem('cozy9Fullness',state.full);localStorage.setItem('cozy9Fish',state.fish);localStorage.setItem('cozy9Inventory',JSON.stringify(state.inventory));localStorage.setItem('cozy10LastCheckin',state.lastCheckin);localStorage.setItem('cozy10CheckinStreak',state.streak);localStorage.setItem('cozyLearningV4',JSON.stringify(learning));localStorage.setItem('cozy9Learned-'+dayKey(),JSON.stringify(currentLearned()));localStorage.setItem('cozy9Claimed-'+dayKey(),JSON.stringify(currentClaimed()))}
 const HOUR=60*60*1000;
+const NEEDS_CLOCK_VERSION=2;
 function loadNeedsMeta(){
   const now=Date.now();let n=safeParse(localStorage.getItem('cozy11Needs'),{})||{};
-  const last=Number(n.lastActivity)||now;n.lastActivity=last;
-  n.nextFull=Number(n.nextFull)||last+3*HOUR;
-  n.nextMood=Number(n.nextMood)||last+9*HOUR;
-  n.nextFish=Number(n.nextFish)||last+4*HOUR;
+  const legacyLast=Number(n.lastVisitAt)||Number(n.lastActivity)||now;
+  n.lastVisitAt=legacyLast;
+  if(Number(n.clockVersion)!==NEEDS_CLOCK_VERSION){
+    n.clockVersion=NEEDS_CLOCK_VERSION;
+    n.nextFull=now+2*HOUR;
+    n.moodPhaseStarted=now;
+    n.nextMood=now+6*HOUR;
+    n.nextFish=now+2*HOUR;
+  }else{
+    n.nextFull=Number(n.nextFull)||now+2*HOUR;
+    n.moodPhaseStarted=Number(n.moodPhaseStarted)||now;
+    n.nextMood=Number(n.nextMood)||n.moodPhaseStarted+6*HOUR;
+    n.nextFish=Number(n.nextFish)||now+2*HOUR;
+  }
   n.petTimes=Array.isArray(n.petTimes)?n.petTimes.map(Number).filter(Number.isFinite):[];
   n.batchFocus=Array.isArray(n.batchFocus)?n.batchFocus:[];
   n.quizFocus=Array.isArray(n.quizFocus)?n.quizFocus:[];
@@ -92,19 +103,20 @@ function loadNeedsMeta(){
 }
 const needs=loadNeedsMeta();
 function saveNeedsMeta(){needs.petTimes=needs.petTimes.slice(-20);needs.batchFocus=needs.batchFocus.slice(-120);needs.quizFocus=needs.quizFocus.slice(-120);localStorage.setItem('cozy11Needs',JSON.stringify(needs))}
-function markCatActivity(now=Date.now()){
-  needs.lastActivity=now;needs.nextFull=now+3*HOUR;needs.nextMood=now+9*HOUR;needs.nextFish=now+4*HOUR;saveNeedsMeta();
-}
+function markCatVisit(now=Date.now()){needs.lastVisitAt=now;saveNeedsMeta()}
+function resetFullClock(now=Date.now()){needs.nextFull=now+2*HOUR;saveNeedsMeta()}
+function resetMoodClock(now=Date.now()){needs.moodPhaseStarted=now;needs.nextMood=now+6*HOUR;saveNeedsMeta()}
+function resetFishClock(now=Date.now()){needs.nextFish=now+2*HOUR;saveNeedsMeta()}
 function applyPassiveNeeds(now=Date.now()){
   let changed=false;
   if(now>=needs.nextFull){const steps=Math.floor((now-needs.nextFull)/HOUR)+1;state.full=clamp(state.full-steps);needs.nextFull+=steps*HOUR;changed=true}
   if(now>=needs.nextFish){const steps=Math.floor((now-needs.nextFish)/(2*HOUR))+1;state.fish=clamp(state.fish+steps*3);needs.nextFish+=steps*2*HOUR;changed=true}
-  let guard=0;while(now>=needs.nextMood&&guard++<10000){state.mood=clamp(state.mood-1);const age=needs.nextMood-needs.lastActivity;needs.nextMood+=age>=24*HOUR?2*HOUR:3*HOUR;changed=true}
+  let guard=0;while(now>=needs.nextMood&&guard++<10000){state.mood=clamp(state.mood-1);const age=needs.nextMood-needs.moodPhaseStarted;needs.nextMood+=age>=24*HOUR?2*HOUR:3*HOUR;changed=true}
   saveNeedsMeta();return changed;
 }
-function maybeReturnBonus(awayMs){if(awayMs<6*HOUR||needs.returnBonusDay===dayKey())return false;state.mood=clamp(state.mood+3);needs.returnBonusDay=dayKey();saveNeedsMeta();return true}
+function maybeReturnBonus(awayMs,now=Date.now()){if(awayMs<6*HOUR||needs.returnBonusDay===dayKey())return false;state.mood=clamp(state.mood+3);needs.returnBonusDay=dayKey();resetMoodClock(now);saveNeedsMeta();return true}
 function catMoodLine(){if(state.mood<20)return'猫猫缩成一小团，今天不太想动。<br>不过你回来以后，它悄悄抬头看了你一眼。';if(state.mood<40)return'猫猫今天有点蔫，安安静静地趴着。<br>好像已经等你一阵子啦。';if(state.mood<70)return'猫猫今天有一点安静，<br>听见你回来以后尾巴轻轻动了一下。';return'听见你回来，小猫立刻抬起头看你。♡'}
-function applyFocusOnce(bucket,token,amount){const list=needs[bucket];if(list.includes(token))return false;list.push(token);state.fish=clamp(state.fish-amount);saveNeedsMeta();return true}
+function applyFocusOnce(bucket,token,amount){const list=needs[bucket];if(list.includes(token))return false;list.push(token);state.fish=clamp(state.fish-amount);resetFishClock();saveNeedsMeta();return true}
 function speech(t){const e=$('#speech');if(e)e.innerHTML=t}
 function toast(t){const e=$('#toast');if(!e)return; e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),1800)}
 function animate(c){const e=$('#catWrap');if(!e)return;e.classList.remove('petting','eating');void e.offsetWidth;e.classList.add(c);setTimeout(()=>e.classList.remove(c),900)}
@@ -149,14 +161,14 @@ function renderWords(){
   const pw=$('#profileWords');if(pw)pw.textContent=learning.seen.length;const sw=$('#sumWords');if(sw)sw.textContent=`${learned.length} / 20 · 第${currentBatch()}组`;
 }
 function rewards(){const learned=currentLearned(),claimed=currentClaimed();for(const [n,k] of MILESTONES){if(learned.length>=n&&!claimed.includes(n)){state.inventory[k]=(state.inventory[k]||0)+1;claimed.push(n);toast(`学习奖励 +1：${FOOD[k].emoji} ${FOOD[k].name}`);speech(`太棒啦！这组学到 ${n} 个词了，<br>小猫得到了一份${FOOD[k].name}！`)}}renderInventory();save()}
-function toggle(i){const learned=currentLearned();const p=learned.indexOf(i);if(p>=0)learned.splice(p,1);else{learned.push(i);const id=currentWords()[i]?.id;if(id&&!learning.seen.includes(id))learning.seen.push(id)}state.mood=clamp(state.mood+.8);if(p<0&&learned.length===20){const token=dayKey()+':'+currentBatch();if(applyFocusOnce('batchFocus',token,8))toast('学完这一组：摸鱼值 -8 ✨')}renderWords();rewards();renderStatus();renderSummary();save()}
-function pet(){const now=Date.now();needs.petTimes=needs.petTimes.filter(t=>now-t<15*60*1000);const tier=Math.min(needs.petTimes.length,3),moodGain=[8,5,2,0][tier],fishDrop=[2,1,1,0][tier];needs.petTimes.push(now);saveNeedsMeta();state.mood=clamp(state.mood+moodGain);state.fish=clamp(state.fish-fishDrop);const extra=moodGain?`<br>心情 +${moodGain}${fishDrop?`，摸鱼值 -${fishDrop}`:''}`:'<br>它已经被摸得很满足啦，再摸也只负责呼噜。';speech(PET[Math.floor(Math.random()*PET.length)]+extra);animate('petting');hearts();renderStatus();renderSummary();save()}
+function toggle(i){const learned=currentLearned();const p=learned.indexOf(i);if(p>=0)learned.splice(p,1);else{learned.push(i);const id=currentWords()[i]?.id;if(id&&!learning.seen.includes(id))learning.seen.push(id)}state.mood=clamp(state.mood+.8);if(p<0)resetMoodClock();if(p<0&&learned.length===20){const token=dayKey()+':'+currentBatch();if(applyFocusOnce('batchFocus',token,8))toast('学完这一组：摸鱼值 -8 ✨')}renderWords();rewards();renderStatus();renderSummary();save()}
+function pet(){const now=Date.now();needs.petTimes=needs.petTimes.filter(t=>now-t<15*60*1000);const tier=Math.min(needs.petTimes.length,3),moodGain=[8,5,2,0][tier],fishDrop=[2,1,1,0][tier];needs.petTimes.push(now);state.mood=clamp(state.mood+moodGain);state.fish=clamp(state.fish-fishDrop);if(moodGain)resetMoodClock(now);if(fishDrop)resetFishClock(now);saveNeedsMeta();const extra=moodGain?`<br>心情 +${moodGain}${fishDrop?`，摸鱼值 -${fishDrop}`:''}`:'<br>它已经被摸得很满足啦，再摸也只负责呼噜。';speech(PET[Math.floor(Math.random()*PET.length)]+extra);animate('petting');hearts();renderStatus();renderSummary();save()}
 function work(){state.fish=clamp(state.fish+10);state.full=clamp(state.full-2);speech(WORK[Math.floor(Math.random()*WORK.length)]);renderStatus();renderSummary();save()}
 function page(n){$$('.page').forEach(x=>x.classList.toggle('active',x.dataset.page===n));$$('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===n));scrollTo({top:0,behavior:'smooth'})}
-function feed(k,source){if(!(state.inventory[k]>0)){toast('这个奖励还没有哦，先去学单词吧');return}state.inventory[k]--;state.full=clamp(state.full+FOOD[k].full);state.mood=clamp(state.mood+FOOD[k].mood);state.fish=clamp(state.fish-4);closeReward();page('home');setTimeout(()=>{flyFood(k,source);setTimeout(()=>{animate('eating');hearts()},560)},80);speech(`${FOOD[k].emoji} ${FOOD[k].name}送达！小猫认真开饭啦。<br>摸鱼值 -4`);renderInventory();renderStatus();renderSummary();save()}
+function feed(k,source){if(!(state.inventory[k]>0)){toast('这个奖励还没有哦，先去学单词吧');return}const now=Date.now();state.inventory[k]--;state.full=clamp(state.full+FOOD[k].full);state.mood=clamp(state.mood+FOOD[k].mood);state.fish=clamp(state.fish-4);resetFullClock(now);resetMoodClock(now);resetFishClock(now);closeReward();page('home');setTimeout(()=>{flyFood(k,source);setTimeout(()=>{animate('eating');hearts()},560)},80);speech(`${FOOD[k].emoji} ${FOOD[k].name}送达！小猫认真开饭啦。<br>摸鱼值 -4`);renderInventory();renderStatus();renderSummary();save()}
 function quickFeed(){const k=['beef','chicken','cake','milk'].find(x=>state.inventory[x]>0);if(!k){speech('先完成今天的德福词，<br>给小猫赚点好吃的吧！');toast('零食柜还是空的～');return}feed(k,$('#quickFeedBtn'))}
 function renderCheckin(){const done=state.lastCheckin===dayKey();$('#checkinState').textContent=done?'今天已签到':'今天还没签到';$('#streakNumber').textContent=state.streak;$('#checkinBtn').disabled=done;$('#checkinBtn').textContent=done?'今天已经签到啦 ♡':'今日签到 ♡';$('#profileStreak').textContent=state.streak+' 天';$('#sumCheckin').textContent=done?'已签到':'未签到'}
-function checkin(){if(state.lastCheckin===dayKey())return toast('今天已经签到过啦 ♡');state.streak=state.lastCheckin===offset(-1)?state.streak+1:1;state.lastCheckin=dayKey();state.inventory.milk++;let b='🥛 牛奶 +1';if(state.streak%14===0){state.inventory.beef++;b+='，🥩 牛肉 +1'}else if(state.streak%7===0){state.inventory.cake++;b+='，🍰 蛋糕 +1'}else if(state.streak%3===0){state.inventory.chicken++;b+='，🍗 鸡腿 +1'}state.mood=clamp(state.mood+2);speech('签到成功！<br>'+b+'。小猫已经记住你今天来过啦。♡');toast('签到成功：'+b);renderCheckin();renderInventory();renderStatus();renderSummary();save()}
+function checkin(){if(state.lastCheckin===dayKey())return toast('今天已经签到过啦 ♡');state.streak=state.lastCheckin===offset(-1)?state.streak+1:1;state.lastCheckin=dayKey();state.inventory.milk++;let b='🥛 牛奶 +1';if(state.streak%14===0){state.inventory.beef++;b+='，🥩 牛肉 +1'}else if(state.streak%7===0){state.inventory.cake++;b+='，🍰 蛋糕 +1'}else if(state.streak%3===0){state.inventory.chicken++;b+='，🍗 鸡腿 +1'}state.mood=clamp(state.mood+2);resetMoodClock();speech('签到成功！<br>'+b+'。小猫已经记住你今天来过啦。♡');toast('签到成功：'+b);renderCheckin();renderInventory();renderStatus();renderSummary();save()}
 function eventObj(){return EVENTS[hash('event-'+dayKey())%EVENTS.length]}
 function event(){const e=eventObj();$('#dailyEventText').textContent=e.text;$('#dailyEventEffect').textContent='今日效果：'+e.effect;const k='cozy10EventApplied-'+dayKey();if(localStorage.getItem(k)!=='1'){state.mood=clamp(state.mood+e.mood);state.full=clamp(state.full+e.full);state.fish=clamp(state.fish+e.fish);localStorage.setItem(k,'1');save();renderStatus();renderSummary()}speech(e.text)}
 function openQuiz(){$('#quizOverlay').classList.add('show')}function closeQuiz(){$('#quizOverlay').classList.remove('show')}function openReward(){$('#rewardOverlay').classList.add('show')}function closeReward(){$('#rewardOverlay').classList.remove('show')}
@@ -179,19 +191,19 @@ function finishQuiz(){
     scheduleNewBatchReviews();if(!todayData().tested.includes(currentBatch()))todayData().tested.push(currentBatch());let k=null;if(state.score===5)k='cake';else if(state.score===4)k='chicken';else if(state.score>=3)k='milk';let t='答对 3 题以上就能领小奖励，再试一次吧。';if(!state.quizRewarded&&k){state.inventory[k]++;state.quizRewarded=true;localStorage.setItem('cozy10QuizReward-'+dayKey(),'1');t=`今天第一次小测奖励：${FOOD[k].emoji} ${FOOD[k].name} +1`}else if(state.quizRewarded)t='今天的小测奖励已经领过啦；但完成这一组后仍可开启下一组新词。';$('#quizProgressFill').style.width='100%';$('#quizScoreLabel').textContent='完成 · '+state.score+' / 5';$('#quizStage').innerHTML=`<div class="quiz-result"><div class="score-big">${state.score} / 5</div><div>${state.score===5?'全对！猫猫已经开始骄傲了。':state.score>=3?'不错呀，已经记住大部分了。':'答错的词已经加入复习队列。'}</div><div class="micro-note">${t}</div><button class="subbtn event-btn" id="restartQuizBtn" type="button" style="max-width:240px">再来 5 题</button></div>`;$('#restartQuizBtn').addEventListener('click',()=>startQuiz('new'));
   }
   if(state.quizMode==='review'){if(needs.reviewFocusDay!==dayKey()){state.fish=clamp(state.fish-8);needs.reviewFocusDay=dayKey();saveNeedsMeta();toast('完成复习：摸鱼值 -8 ✨')}}else{const token=dayKey()+':'+currentBatch();if(applyFocusOnce('quizFocus',token,10))toast('完成小测：摸鱼值 -10 ✨')}
-  state.mood=clamp(state.mood+state.score);renderInventory();renderStatus();renderWords();renderSummary();save();
+  state.mood=clamp(state.mood+state.score);if(state.score>0)resetMoodClock();renderInventory();renderStatus();renderWords();renderSummary();save();
 }
 function nextBatch(){if(currentLearned().length<20||!todayData().tested.includes(currentBatch()))return toast('这组先学完并完成小测哦 ♡');todayData().batch++;todayData().learned[String(todayData().batch)] ||= [];todayData().claimed[String(todayData().batch)] ||= [];closeQuiz();renderWords();speech(`第 ${currentBatch()} 组 20 个新词来啦！<br>猫猫继续陪你。♡`);toast('新的 20 个词已经准备好啦！');save();scrollTo({top:0,behavior:'smooth'})}
 function renderSummary(){$('#sumQuiz').textContent=state.quizRewarded?'已领取':'未领取';$('#sumCat').textContent=catStatusText()}
 
-const cozyStartedAt=Date.now(),cozyAway=cozyStartedAt-needs.lastActivity;
-const cozyPassiveChanged=applyPassiveNeeds(cozyStartedAt),cozyReturnBonus=maybeReturnBonus(cozyAway);
-markCatActivity(cozyStartedAt);if(cozyPassiveChanged||cozyReturnBonus){renderStatus();renderSummary();save()}if(cozyAway>=6*HOUR)speech(catMoodLine());
+const cozyStartedAt=Date.now(),cozyAway=cozyStartedAt-needs.lastVisitAt;
+const cozyPassiveChanged=applyPassiveNeeds(cozyStartedAt),cozyReturnBonus=maybeReturnBonus(cozyAway,cozyStartedAt);
+markCatVisit(cozyStartedAt);if(cozyPassiveChanged||cozyReturnBonus){renderStatus();renderSummary();save()}if(cozyAway>=6*HOUR)speech(catMoodLine());
 let cozyLastInput=cozyStartedAt,cozyActiveSeconds=0;
-function cozyUserActive(){cozyLastInput=Date.now();markCatActivity(cozyLastInput)}
+function cozyUserActive(){cozyLastInput=Date.now();markCatVisit(cozyLastInput)}
 document.addEventListener('pointerdown',cozyUserActive,true);document.addEventListener('keydown',cozyUserActive,true);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;const now=Date.now(),away=now-needs.lastActivity,changed=applyPassiveNeeds(now),bonus=maybeReturnBonus(away);markCatActivity(now);cozyLastInput=now;if(changed||bonus){renderStatus();renderSummary();save()}if(away>=6*HOUR)speech(catMoodLine())});
-setInterval(()=>{const now=Date.now();let changed=applyPassiveNeeds(now);if(!document.hidden&&now-cozyLastInput<2*60*1000){cozyActiveSeconds+=60;if(cozyActiveSeconds>=600){cozyActiveSeconds=0;state.fish=clamp(state.fish-3);toast('陪猫学习 10 分钟：摸鱼值 -3 ✨');changed=true}}else cozyActiveSeconds=0;if(changed){renderStatus();renderSummary();save()}},60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;const now=Date.now(),away=now-needs.lastVisitAt,changed=applyPassiveNeeds(now),bonus=maybeReturnBonus(away,now);markCatVisit(now);cozyLastInput=now;if(changed||bonus){renderStatus();renderSummary();save()}if(away>=6*HOUR)speech(catMoodLine())});
+setInterval(()=>{const now=Date.now();let changed=applyPassiveNeeds(now);if(!document.hidden&&now-cozyLastInput<2*60*1000){cozyActiveSeconds+=60;if(cozyActiveSeconds>=600){cozyActiveSeconds=0;state.fish=clamp(state.fish-3);resetFishClock(now);toast('陪猫学习 10 分钟：摸鱼值 -3 ✨');changed=true}}else cozyActiveSeconds=0;if(changed){renderStatus();renderSummary();save()}},60*1000);
 $('#petBtn').addEventListener('click',pet);$('#cat').addEventListener('click',pet);$('#quickFeedBtn').addEventListener('click',quickFeed);$('#workBtn').addEventListener('click',work);$('#checkinBtn').addEventListener('click',checkin);$('#eventBtn').addEventListener('click',event);
 ['#toQuizBtn','#floatQuizBtn','#openQuizFromStudy'].forEach(s=>$(s)?.addEventListener('click',()=>startQuiz('new')));['#toRewardsBtn','#floatRewardsBtn','#openRewardsFromStudy'].forEach(s=>$(s)?.addEventListener('click',openReward));$('#closeQuizBtn').addEventListener('click',closeQuiz);$('#closeRewardBtn').addEventListener('click',closeReward);$('#startQuizBtn').addEventListener('click',()=>startQuiz('new'));$('#quizOverlay').addEventListener('click',e=>{if(e.target.id==='quizOverlay')closeQuiz()});$('#rewardOverlay').addEventListener('click',e=>{if(e.target.id==='rewardOverlay')closeReward()});$$('[data-feed]').forEach(b=>b.addEventListener('click',()=>feed(b.dataset.feed,b)));$$('[data-nav]').forEach(b=>b.addEventListener('click',()=>page(b.dataset.nav)));
 renderStatus();renderWords();rewards();renderInventory();renderCheckin();event();renderSummary();save();
