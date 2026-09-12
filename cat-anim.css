@@ -1,7 +1,7 @@
-/* Cat state layer v15: smaller cat-to-cushion ratio + gentle state motion. */
+/* Cat state layer v16: balanced cat-to-cushion ratio + gentle state motion. */
 .cat-zone{
-  width:min(178px,56%)!important;
-  top:55%!important;
+  width:min(190px,58%)!important;
+  top:54.2%!important;
 }
 .cat-wrap{transform-origin:center bottom;will-change:transform;overflow:visible}
 .cat-wrap .eyes{display:none}
@@ -14,10 +14,12 @@
   user-select:none;
   -webkit-user-drag:none;
   transform:none!important;
+  image-rendering:auto;
+  backface-visibility:hidden;
   filter:drop-shadow(0 12px 15px rgba(76,56,40,.16));
 }
-/* The sleeping pose is visually wider than the other drawings, so keep it a touch smaller. */
-.cat-wrap.state-sleep .cat-img{width:94%!important;max-width:94%!important}
+/* Sleeping pose is naturally wider; keep it broad enough to sit in the middle of the cushion. */
+.cat-wrap.state-sleep .cat-img{width:97%!important;max-width:97%!important}
 
 .cat-wrap.state-idle{animation:catIdleBreath 3.4s ease-in-out infinite}
 .cat-wrap.state-happy{animation:catHappyBreath 2.8s ease-in-out infinite}
@@ -36,8 +38,8 @@
 @keyframes catPetBounce{0%,100%{transform:translateY(0) scale(1)}38%{transform:translateY(-6px) scale(1.028)}66%{transform:translateY(-2px) scale(1.016)}}
 
 @media(max-width:430px){
-  .cat-zone{width:min(168px,50%)!important;top:55.5%!important}
-  .cat-wrap.state-sleep .cat-img{width:92%!important;max-width:92%!important}
+  .cat-zone{width:min(188px,56%)!important;top:54.1%!important}
+  .cat-wrap.state-sleep .cat-img{width:97%!important;max-width:97%!important}
 }
 
 @media(prefers-reduced-motion:reduce){
