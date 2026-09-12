@@ -17,6 +17,7 @@
       if(m[1]==="cozy10EventApplied-")day.eventApplied=raw==="1";
       save.days[m[2]]=day;
     }
+    save.needs=parse(localStorage.getItem("cozy11Needs"),null);save.sleeping=localStorage.getItem("cozy11CatSleeping")==="1";
     return save;
   }
   function normalize(data){
@@ -26,10 +27,11 @@
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
       out.days[date]={learned:Array.isArray(d?.learned)?d.learned:[],claimed:Array.isArray(d?.claimed)?d.claimed:[],quizRewarded:Boolean(d?.quizRewarded),eventApplied:Boolean(d?.eventApplied)};
     }
+    out.needs=data.needs||null;out.sleeping=Boolean(data.sleeping);
     return out;
   }
   function saveMaster(data,backup=true){const s=normalize(data);if(!s)return false;if(backup){const old=localStorage.getItem(MASTER_KEY);if(old)localStorage.setItem(BACKUP_KEY,old)}s.updatedAt=new Date().toISOString();localStorage.setItem(MASTER_KEY,JSON.stringify(s));updateStatus(s.updatedAt);return true}
-  function restore(data){const s=normalize(data);if(!s)return false;const p=s.profile;localStorage.setItem("cozy9Mood",String(p.mood));localStorage.setItem("cozy9Fullness",String(p.fullness));localStorage.setItem("cozy9Fish",String(p.fish));localStorage.setItem("cozy9Inventory",JSON.stringify(p.inventory));localStorage.setItem("cozy10LastCheckin",p.lastCheckin);localStorage.setItem("cozy10CheckinStreak",String(p.checkinStreak));if(s.learning)localStorage.setItem(LEARNING_KEY,JSON.stringify(s.learning));for(const [date,d] of Object.entries(s.days)){localStorage.setItem("cozy9Learned-"+date,JSON.stringify(d.learned));localStorage.setItem("cozy9Claimed-"+date,JSON.stringify(d.claimed));if(d.quizRewarded)localStorage.setItem("cozy10QuizReward-"+date,"1");if(d.eventApplied)localStorage.setItem("cozy10EventApplied-"+date,"1")}return true}
+  function restore(data){const s=normalize(data);if(!s)return false;const p=s.profile;localStorage.setItem("cozy9Mood",String(p.mood));localStorage.setItem("cozy9Fullness",String(p.fullness));localStorage.setItem("cozy9Fish",String(p.fish));localStorage.setItem("cozy9Inventory",JSON.stringify(p.inventory));localStorage.setItem("cozy10LastCheckin",p.lastCheckin);localStorage.setItem("cozy10CheckinStreak",String(p.checkinStreak));if(s.learning)localStorage.setItem(LEARNING_KEY,JSON.stringify(s.learning));for(const [date,d] of Object.entries(s.days)){localStorage.setItem("cozy9Learned-"+date,JSON.stringify(d.learned));localStorage.setItem("cozy9Claimed-"+date,JSON.stringify(d.claimed));if(d.quizRewarded)localStorage.setItem("cozy10QuizReward-"+date,"1");if(d.eventApplied)localStorage.setItem("cozy10EventApplied-"+date,"1")}if(s.needs)localStorage.setItem("cozy11Needs",JSON.stringify(s.needs));else localStorage.removeItem("cozy11Needs");localStorage.setItem("cozy11CatSleeping",s.sleeping?"1":"0");return true}
   function hasCurrentData(){return PROFILE_KEYS.some(k=>localStorage.getItem(k)!==null)}
   function findOlderMaster(){for(const key of ["cozyCatSaveV3","cozyCatSaveV2","cozyCatSaveV1"]){const x=parse(localStorage.getItem(key),null);if(x?.profile)return x}return null}
   function initialize(){try{const master=normalize(parse(localStorage.getItem(MASTER_KEY),null));if(hasCurrentData())saveMaster(collect(),false);else if(master)restore(master);else{const older=findOlderMaster();if(older){restore(older);saveMaster(collect(),false)}else saveMaster(collect(),false)}}catch(_){}}
