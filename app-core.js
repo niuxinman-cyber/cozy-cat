@@ -114,7 +114,7 @@ function applyPassiveNeeds(now=Date.now()){
   let guard=0;while(now>=needs.nextMood&&guard++<10000){state.mood=clamp(state.mood-1);const age=needs.nextMood-needs.moodPhaseStarted;needs.nextMood+=age>=24*HOUR?2*HOUR:3*HOUR;changed=true}
   saveNeedsMeta();return changed;
 }
-function maybeReturnBonus(awayMs,now=Date.now()){if(awayMs<6*HOUR||needs.returnBonusDay===dayKey())return false;state.mood=clamp(state.mood+3);needs.returnBonusDay=dayKey();resetMoodClock(now);saveNeedsMeta();return true}
+function maybeReturnBonus(){return false}
 function catMoodLine(){if(state.mood<20)return'猫猫缩成一小团，今天不太想动。<br>不过你回来以后，它悄悄抬头看了你一眼。';if(state.mood<40)return'猫猫今天有点蔫，安安静静地趴着。<br>好像已经等你一阵子啦。';if(state.mood<70)return'猫猫今天有一点安静，<br>听见你回来以后尾巴轻轻动了一下。';return'听见你回来，小猫立刻抬起头看你。♡'}
 function applyFocusOnce(bucket,token,amount){const list=needs[bucket];if(list.includes(token))return false;list.push(token);state.fish=clamp(state.fish-amount);resetFishClock();saveNeedsMeta();return true}
 function speech(t){const e=$('#speech');if(e)e.innerHTML=t}
@@ -196,13 +196,21 @@ function finishQuiz(){
 function nextBatch(){if(currentLearned().length<20||!todayData().tested.includes(currentBatch()))return toast('这组先学完并完成小测哦 ♡');todayData().batch++;todayData().learned[String(todayData().batch)] ||= [];todayData().claimed[String(todayData().batch)] ||= [];closeQuiz();renderWords();speech(`第 ${currentBatch()} 组 20 个新词来啦！<br>猫猫继续陪你。♡`);toast('新的 20 个词已经准备好啦！');save();scrollTo({top:0,behavior:'smooth'})}
 function renderSummary(){$('#sumQuiz').textContent=state.quizRewarded?'已领取':'未领取';$('#sumCat').textContent=catStatusText()}
 
-const cozyStartedAt=Date.now(),cozyAway=cozyStartedAt-needs.lastVisitAt;
-const cozyPassiveChanged=applyPassiveNeeds(cozyStartedAt),cozyReturnBonus=maybeReturnBonus(cozyAway,cozyStartedAt);
-markCatVisit(cozyStartedAt);if(cozyPassiveChanged||cozyReturnBonus){renderStatus();renderSummary();save()}if(cozyAway>=6*HOUR)speech(catMoodLine());
+const cozyStartedAt=Date.now();
+function reconcileCatNeeds(now=Date.now(),speakOnReturn=false){
+  const away=Math.max(0,now-needs.lastVisitAt),changed=applyPassiveNeeds(now);
+  markCatVisit(now);
+  if(changed){renderStatus();renderSummary();save()}
+  if(speakOnReturn&&away>=6*HOUR)speech(catMoodLine());
+  return{away,changed};
+}
+reconcileCatNeeds(cozyStartedAt,true);
 let cozyLastInput=cozyStartedAt,cozyActiveSeconds=0;
-function cozyUserActive(){cozyLastInput=Date.now();markCatVisit(cozyLastInput)}
+function cozyUserActive(){const now=Date.now();if(now-needs.lastVisitAt>60*1000)reconcileCatNeeds(now,false);else markCatVisit(now);cozyLastInput=now}
 document.addEventListener('pointerdown',cozyUserActive,true);document.addEventListener('keydown',cozyUserActive,true);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;const now=Date.now(),away=now-needs.lastVisitAt,changed=applyPassiveNeeds(now),bonus=maybeReturnBonus(away,now);markCatVisit(now);cozyLastInput=now;if(changed||bonus){renderStatus();renderSummary();save()}if(away>=6*HOUR)speech(catMoodLine())});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){const now=Date.now();reconcileCatNeeds(now,true);cozyLastInput=now}});
+window.addEventListener('focus',()=>{const now=Date.now();reconcileCatNeeds(now,false);cozyLastInput=now});
+window.addEventListener('pageshow',()=>{const now=Date.now();reconcileCatNeeds(now,false);cozyLastInput=now});
 setInterval(()=>{const now=Date.now();let changed=applyPassiveNeeds(now);if(!document.hidden&&now-cozyLastInput<2*60*1000){cozyActiveSeconds+=60;if(cozyActiveSeconds>=600){cozyActiveSeconds=0;state.fish=clamp(state.fish-3);resetFishClock(now);toast('陪猫学习 10 分钟：摸鱼值 -3 ✨');changed=true}}else cozyActiveSeconds=0;if(changed){renderStatus();renderSummary();save()}},60*1000);
 $('#petBtn').addEventListener('click',pet);$('#cat').addEventListener('click',pet);$('#quickFeedBtn').addEventListener('click',quickFeed);$('#workBtn').addEventListener('click',work);$('#checkinBtn').addEventListener('click',checkin);$('#eventBtn').addEventListener('click',event);
 ['#toQuizBtn','#floatQuizBtn','#openQuizFromStudy'].forEach(s=>$(s)?.addEventListener('click',()=>startQuiz('new')));['#toRewardsBtn','#floatRewardsBtn','#openRewardsFromStudy'].forEach(s=>$(s)?.addEventListener('click',openReward));$('#closeQuizBtn').addEventListener('click',closeQuiz);$('#closeRewardBtn').addEventListener('click',closeReward);$('#startQuizBtn').addEventListener('click',()=>startQuiz('new'));$('#quizOverlay').addEventListener('click',e=>{if(e.target.id==='quizOverlay')closeQuiz()});$('#rewardOverlay').addEventListener('click',e=>{if(e.target.id==='rewardOverlay')closeReward()});$$('[data-feed]').forEach(b=>b.addEventListener('click',()=>feed(b.dataset.feed,b)));$$('[data-nav]').forEach(b=>b.addEventListener('click',()=>page(b.dataset.nav)));
