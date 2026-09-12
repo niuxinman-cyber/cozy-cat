@@ -1,9 +1,9 @@
-/* Cat state layer v17: balanced cat-to-cushion ratio + sharper mobile rendering. */
+/* Cat state layer v19: original-resolution art + crisp mobile rendering. */
 .cat-zone{
   width:min(190px,58%)!important;
   top:54.2%!important;
 }
-.cat-wrap{transform-origin:center bottom;will-change:transform;overflow:visible}
+.cat-wrap{transform-origin:center bottom;overflow:visible}
 .cat-wrap .eyes{display:none}
 .cat-img{
   display:block;
@@ -16,9 +16,8 @@
   -webkit-user-drag:none;
   transform:none!important;
   image-rendering:auto;
-  image-rendering:-webkit-optimize-contrast;
-  backface-visibility:hidden;
-  filter:contrast(1.035) saturate(1.015) drop-shadow(0 8px 10px rgba(76,56,40,.11));
+  backface-visibility:visible;
+  filter:none;
 }
 /* Sleeping pose is naturally wider; keep it broad enough to sit in the middle of the cushion. */
 .cat-wrap.state-sleep .cat-img{width:97%!important;max-width:97%!important}
@@ -31,10 +30,11 @@
 .cat-wrap.state-celebrate{animation:catCelebrate 1.08s cubic-bezier(.2,.82,.24,1) both}
 .cat-wrap.petting{animation:catPetBounce .68s ease-in-out!important}
 
-@keyframes catIdleBreath{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.014)}}
-@keyframes catHappyBreath{0%,100%{transform:translateY(0) scale(1)}42%{transform:translateY(-3px) scale(1.018)}58%{transform:translateY(-2px) scale(1.014)}}
-@keyframes catHungryBreath{0%,100%{transform:translateY(0) scale(1)}48%{transform:translateY(-1px) scale(1.012)}62%{transform:translateY(1px) scale(1.016)}}
-@keyframes catSleepBreath{0%,100%{transform:translateY(0) scaleX(1) scaleY(1)}50%{transform:translateY(-1px) scaleX(1.008) scaleY(1.018)}}
+/* Continuous states use position-only motion. Avoiding scale prevents Safari from re-rasterizing the cat softly. */
+@keyframes catIdleBreath{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes catHappyBreath{0%,100%{transform:translateY(0)}42%{transform:translateY(-3px)}58%{transform:translateY(-2px)}}
+@keyframes catHungryBreath{0%,100%{transform:translateY(0)}48%{transform:translateY(-1px)}62%{transform:translateY(1px)}}
+@keyframes catSleepBreath{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
 @keyframes catEatNibble{0%,100%{transform:translateY(0) rotate(0) scale(1)}28%{transform:translateY(2px) rotate(-1deg) scale(1.012)}55%{transform:translateY(-1px) rotate(.8deg) scale(1.006)}78%{transform:translateY(2px) rotate(-.5deg) scale(1.014)}}
 @keyframes catCelebrate{0%{transform:translateY(0) scale(1)}26%{transform:translateY(-13px) rotate(-2deg) scale(1.035)}48%{transform:translateY(1px) rotate(1.5deg) scale(.995)}67%{transform:translateY(-6px) rotate(-1deg) scale(1.018)}100%{transform:translateY(0) rotate(0) scale(1)}}
 @keyframes catPetBounce{0%,100%{transform:translateY(0) scale(1)}38%{transform:translateY(-6px) scale(1.028)}66%{transform:translateY(-2px) scale(1.016)}}
