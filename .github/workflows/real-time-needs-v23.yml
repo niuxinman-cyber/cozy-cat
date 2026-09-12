@@ -1,0 +1,135 @@
+name: Install real-time cat needs v23
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    if: github.event.head_commit.message == 'Install real-time needs v23 workflow'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch wall-clock cat needs
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('app-core.js')
+          s=p.read_text(encoding='utf-8')
+
+          new_block=r'''const HOUR=60*60*1000;
+const NEEDS_CLOCK_VERSION=2;
+function loadNeedsMeta(){
+  const now=Date.now();let n=safeParse(localStorage.getItem('cozy11Needs'),{})||{};
+  const legacyLast=Number(n.lastVisitAt)||Number(n.lastActivity)||now;
+  n.lastVisitAt=legacyLast;
+  if(Number(n.clockVersion)!==NEEDS_CLOCK_VERSION){
+    n.clockVersion=NEEDS_CLOCK_VERSION;
+    n.nextFull=now+2*HOUR;
+    n.moodPhaseStarted=now;
+    n.nextMood=now+6*HOUR;
+    n.nextFish=now+2*HOUR;
+  }else{
+    n.nextFull=Number(n.nextFull)||now+2*HOUR;
+    n.moodPhaseStarted=Number(n.moodPhaseStarted)||now;
+    n.nextMood=Number(n.nextMood)||n.moodPhaseStarted+6*HOUR;
+    n.nextFish=Number(n.nextFish)||now+2*HOUR;
+  }
+  n.petTimes=Array.isArray(n.petTimes)?n.petTimes.map(Number).filter(Number.isFinite):[];
+  n.batchFocus=Array.isArray(n.batchFocus)?n.batchFocus:[];
+  n.quizFocus=Array.isArray(n.quizFocus)?n.quizFocus:[];
+  n.reviewFocusDay=String(n.reviewFocusDay||'');n.returnBonusDay=String(n.returnBonusDay||'');
+  return n;
+}
+const needs=loadNeedsMeta();
+function saveNeedsMeta(){needs.petTimes=needs.petTimes.slice(-20);needs.batchFocus=needs.batchFocus.slice(-120);needs.quizFocus=needs.quizFocus.slice(-120);localStorage.setItem('cozy11Needs',JSON.stringify(needs))}
+function markCatVisit(now=Date.now()){needs.lastVisitAt=now;saveNeedsMeta()}
+function resetFullClock(now=Date.now()){needs.nextFull=now+2*HOUR;saveNeedsMeta()}
+function resetMoodClock(now=Date.now()){needs.moodPhaseStarted=now;needs.nextMood=now+6*HOUR;saveNeedsMeta()}
+function resetFishClock(now=Date.now()){needs.nextFish=now+2*HOUR;saveNeedsMeta()}
+function applyPassiveNeeds(now=Date.now()){
+  let changed=false;
+  if(now>=needs.nextFull){const steps=Math.floor((now-needs.nextFull)/HOUR)+1;state.full=clamp(state.full-steps);needs.nextFull+=steps*HOUR;changed=true}
+  if(now>=needs.nextFish){const steps=Math.floor((now-needs.nextFish)/(2*HOUR))+1;state.fish=clamp(state.fish+steps*3);needs.nextFish+=steps*2*HOUR;changed=true}
+  let guard=0;while(now>=needs.nextMood&&guard++<10000){state.mood=clamp(state.mood-1);const age=needs.nextMood-needs.moodPhaseStarted;needs.nextMood+=age>=24*HOUR?2*HOUR:3*HOUR;changed=true}
+  saveNeedsMeta();return changed;
+}
+function maybeReturnBonus(awayMs,now=Date.now()){if(awayMs<6*HOUR||needs.returnBonusDay===dayKey())return false;state.mood=clamp(state.mood+3);needs.returnBonusDay=dayKey();resetMoodClock(now);saveNeedsMeta();return true}
+function catMoodLine(){if(state.mood<20)return'猫猫缩成一小团，今天不太想动。<br>不过你回来以后，它悄悄抬头看了你一眼。';if(state.mood<40)return'猫猫今天有点蔫，安安静静地趴着。<br>好像已经等你一阵子啦。';if(state.mood<70)return'猫猫今天有一点安静，<br>听见你回来以后尾巴轻轻动了一下。';return'听见你回来，小猫立刻抬起头看你。♡'}
+function applyFocusOnce(bucket,token,amount){const list=needs[bucket];if(list.includes(token))return false;list.push(token);state.fish=clamp(state.fish-amount);resetFishClock();saveNeedsMeta();return true}
+'''
+          pattern=re.compile(r"const HOUR=60\*60\*1000;\nfunction loadNeedsMeta\(\)\{.*?function applyFocusOnce\(bucket,token,amount\)\{[^\n]*\}\n",re.S)
+          s,n=pattern.subn(new_block,s,count=1)
+          if n!=1: raise SystemExit(f'needs block matches={n}')
+
+          old="function toggle(i){const learned=currentLearned();const p=learned.indexOf(i);if(p>=0)learned.splice(p,1);else{learned.push(i);const id=currentWords()[i]?.id;if(id&&!learning.seen.includes(id))learning.seen.push(id)}state.mood=clamp(state.mood+.8);if(p<0&&learned.length===20){const token=dayKey()+':'+currentBatch();if(applyFocusOnce('batchFocus',token,8))toast('学完这一组：摸鱼值 -8 ✨')}renderWords();rewards();renderStatus();renderSummary();save()}"
+          new="function toggle(i){const learned=currentLearned();const p=learned.indexOf(i);if(p>=0)learned.splice(p,1);else{learned.push(i);const id=currentWords()[i]?.id;if(id&&!learning.seen.includes(id))learning.seen.push(id)}state.mood=clamp(state.mood+.8);if(p<0)resetMoodClock();if(p<0&&learned.length===20){const token=dayKey()+':'+currentBatch();if(applyFocusOnce('batchFocus',token,8))toast('学完这一组：摸鱼值 -8 ✨')}renderWords();rewards();renderStatus();renderSummary();save()}"
+          if old not in s: raise SystemExit('toggle target not found')
+          s=s.replace(old,new,1)
+
+          old="function pet(){const now=Date.now();needs.petTimes=needs.petTimes.filter(t=>now-t<15*60*1000);const tier=Math.min(needs.petTimes.length,3),moodGain=[8,5,2,0][tier],fishDrop=[2,1,1,0][tier];needs.petTimes.push(now);saveNeedsMeta();state.mood=clamp(state.mood+moodGain);state.fish=clamp(state.fish-fishDrop);const extra=moodGain?`<br>心情 +${moodGain}${fishDrop?`，摸鱼值 -${fishDrop}`:''}`:'<br>它已经被摸得很满足啦，再摸也只负责呼噜。';speech(PET[Math.floor(Math.random()*PET.length)]+extra);animate('petting');hearts();renderStatus();renderSummary();save()}"
+          new="function pet(){const now=Date.now();needs.petTimes=needs.petTimes.filter(t=>now-t<15*60*1000);const tier=Math.min(needs.petTimes.length,3),moodGain=[8,5,2,0][tier],fishDrop=[2,1,1,0][tier];needs.petTimes.push(now);state.mood=clamp(state.mood+moodGain);state.fish=clamp(state.fish-fishDrop);if(moodGain)resetMoodClock(now);if(fishDrop)resetFishClock(now);saveNeedsMeta();const extra=moodGain?`<br>心情 +${moodGain}${fishDrop?`，摸鱼值 -${fishDrop}`:''}`:'<br>它已经被摸得很满足啦，再摸也只负责呼噜。';speech(PET[Math.floor(Math.random()*PET.length)]+extra);animate('petting');hearts();renderStatus();renderSummary();save()}"
+          if old not in s: raise SystemExit('pet target not found')
+          s=s.replace(old,new,1)
+
+          old="function feed(k,source){if(!(state.inventory[k]>0)){toast('这个奖励还没有哦，先去学单词吧');return}state.inventory[k]--;state.full=clamp(state.full+FOOD[k].full);state.mood=clamp(state.mood+FOOD[k].mood);state.fish=clamp(state.fish-4);closeReward();page('home');setTimeout(()=>{flyFood(k,source);setTimeout(()=>{animate('eating');hearts()},560)},80);speech(`${FOOD[k].emoji} ${FOOD[k].name}送达！小猫认真开饭啦。<br>摸鱼值 -4`);renderInventory();renderStatus();renderSummary();save()}"
+          new="function feed(k,source){if(!(state.inventory[k]>0)){toast('这个奖励还没有哦，先去学单词吧');return}const now=Date.now();state.inventory[k]--;state.full=clamp(state.full+FOOD[k].full);state.mood=clamp(state.mood+FOOD[k].mood);state.fish=clamp(state.fish-4);resetFullClock(now);resetMoodClock(now);resetFishClock(now);closeReward();page('home');setTimeout(()=>{flyFood(k,source);setTimeout(()=>{animate('eating');hearts()},560)},80);speech(`${FOOD[k].emoji} ${FOOD[k].name}送达！小猫认真开饭啦。<br>摸鱼值 -4`);renderInventory();renderStatus();renderSummary();save()}"
+          if old not in s: raise SystemExit('feed target not found')
+          s=s.replace(old,new,1)
+
+          old="function checkin(){if(state.lastCheckin===dayKey())return toast('今天已经签到过啦 ♡');state.streak=state.lastCheckin===offset(-1)?state.streak+1:1;state.lastCheckin=dayKey();state.inventory.milk++;let b='🥛 牛奶 +1';if(state.streak%14===0){state.inventory.beef++;b+='，🥩 牛肉 +1'}else if(state.streak%7===0){state.inventory.cake++;b+='，🍰 蛋糕 +1'}else if(state.streak%3===0){state.inventory.chicken++;b+='，🍗 鸡腿 +1'}state.mood=clamp(state.mood+2);speech('签到成功！<br>'+b+'。小猫已经记住你今天来过啦。♡');toast('签到成功：'+b);renderCheckin();renderInventory();renderStatus();renderSummary();save()}"
+          new="function checkin(){if(state.lastCheckin===dayKey())return toast('今天已经签到过啦 ♡');state.streak=state.lastCheckin===offset(-1)?state.streak+1:1;state.lastCheckin=dayKey();state.inventory.milk++;let b='🥛 牛奶 +1';if(state.streak%14===0){state.inventory.beef++;b+='，🥩 牛肉 +1'}else if(state.streak%7===0){state.inventory.cake++;b+='，🍰 蛋糕 +1'}else if(state.streak%3===0){state.inventory.chicken++;b+='，🍗 鸡腿 +1'}state.mood=clamp(state.mood+2);resetMoodClock();speech('签到成功！<br>'+b+'。小猫已经记住你今天来过啦。♡');toast('签到成功：'+b);renderCheckin();renderInventory();renderStatus();renderSummary();save()}"
+          if old not in s: raise SystemExit('checkin target not found')
+          s=s.replace(old,new,1)
+
+          old="  state.mood=clamp(state.mood+state.score);renderInventory();renderStatus();renderWords();renderSummary();save();"
+          new="  state.mood=clamp(state.mood+state.score);if(state.score>0)resetMoodClock();renderInventory();renderStatus();renderWords();renderSummary();save();"
+          if old not in s: raise SystemExit('quiz mood target not found')
+          s=s.replace(old,new,1)
+
+          old="const cozyStartedAt=Date.now(),cozyAway=cozyStartedAt-needs.lastActivity;\nconst cozyPassiveChanged=applyPassiveNeeds(cozyStartedAt),cozyReturnBonus=maybeReturnBonus(cozyAway);\nmarkCatActivity(cozyStartedAt);if(cozyPassiveChanged||cozyReturnBonus){renderStatus();renderSummary();save()}if(cozyAway>=6*HOUR)speech(catMoodLine());\nlet cozyLastInput=cozyStartedAt,cozyActiveSeconds=0;\nfunction cozyUserActive(){cozyLastInput=Date.now();markCatActivity(cozyLastInput)}\ndocument.addEventListener('pointerdown',cozyUserActive,true);document.addEventListener('keydown',cozyUserActive,true);\ndocument.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;const now=Date.now(),away=now-needs.lastActivity,changed=applyPassiveNeeds(now),bonus=maybeReturnBonus(away);markCatActivity(now);cozyLastInput=now;if(changed||bonus){renderStatus();renderSummary();save()}if(away>=6*HOUR)speech(catMoodLine())});\nsetInterval(()=>{const now=Date.now();let changed=applyPassiveNeeds(now);if(!document.hidden&&now-cozyLastInput<2*60*1000){cozyActiveSeconds+=60;if(cozyActiveSeconds>=600){cozyActiveSeconds=0;state.fish=clamp(state.fish-3);toast('陪猫学习 10 分钟：摸鱼值 -3 ✨');changed=true}}else cozyActiveSeconds=0;if(changed){renderStatus();renderSummary();save()}},60*1000);"
+          new="const cozyStartedAt=Date.now(),cozyAway=cozyStartedAt-needs.lastVisitAt;\nconst cozyPassiveChanged=applyPassiveNeeds(cozyStartedAt),cozyReturnBonus=maybeReturnBonus(cozyAway,cozyStartedAt);\nmarkCatVisit(cozyStartedAt);if(cozyPassiveChanged||cozyReturnBonus){renderStatus();renderSummary();save()}if(cozyAway>=6*HOUR)speech(catMoodLine());\nlet cozyLastInput=cozyStartedAt,cozyActiveSeconds=0;\nfunction cozyUserActive(){cozyLastInput=Date.now();markCatVisit(cozyLastInput)}\ndocument.addEventListener('pointerdown',cozyUserActive,true);document.addEventListener('keydown',cozyUserActive,true);\ndocument.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;const now=Date.now(),away=now-needs.lastVisitAt,changed=applyPassiveNeeds(now),bonus=maybeReturnBonus(away,now);markCatVisit(now);cozyLastInput=now;if(changed||bonus){renderStatus();renderSummary();save()}if(away>=6*HOUR)speech(catMoodLine())});\nsetInterval(()=>{const now=Date.now();let changed=applyPassiveNeeds(now);if(!document.hidden&&now-cozyLastInput<2*60*1000){cozyActiveSeconds+=60;if(cozyActiveSeconds>=600){cozyActiveSeconds=0;state.fish=clamp(state.fish-3);resetFishClock(now);toast('陪猫学习 10 分钟：摸鱼值 -3 ✨');changed=true}}else cozyActiveSeconds=0;if(changed){renderStatus();renderSummary();save()}},60*1000);"
+          if old not in s: raise SystemExit('lifecycle target not found')
+          s=s.replace(old,new,1)
+
+          p.write_text(s,encoding='utf-8')
+
+          app=Path('app.js');a=app.read_text(encoding='utf-8')
+          if "import('./app-core.js?v=22')" not in a: raise SystemExit('app-core import target not found')
+          a=a.replace("import('./app-core.js?v=22')","import('./app-core.js?v=23')",1)
+          app.write_text(a,encoding='utf-8')
+
+          sw=Path('sw.js');w=sw.read_text(encoding='utf-8')
+          if 'const CACHE = "cozy-cat-cute-v22";' not in w: raise SystemExit('sw cache target not found')
+          w=w.replace('const CACHE = "cozy-cat-cute-v22";','const CACHE = "cozy-cat-cute-v23";',1)
+          sw.write_text(w,encoding='utf-8')
+          PY
+      - name: Syntax and behavior markers
+        run: |
+          node --check app-core.js
+          node --check app.js
+          node --check sw.js
+          grep -q "NEEDS_CLOCK_VERSION=2" app-core.js
+          grep -q "nextFull=now+2\*HOUR" app-core.js
+          grep -q "nextMood=now+6\*HOUR" app-core.js
+          grep -q "nextFish=now+2\*HOUR" app-core.js
+          grep -q "markCatVisit" app-core.js
+          ! grep -q "markCatActivity" app-core.js
+          grep -q "app-core.js?v=23" app.js
+          grep -q "cozy-cat-cute-v23" sw.js
+      - name: Commit real-time needs system
+        run: |
+          rm -f .github/workflows/real-time-needs-v23.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-core.js app.js sw.js .github/workflows/real-time-needs-v23.yml
+          git commit -m "Make cat needs follow real elapsed time"
+          git push
