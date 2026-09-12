@@ -1,4 +1,4 @@
-/* Cat state layer v16: balanced cat-to-cushion ratio + gentle state motion. */
+/* Cat state layer v17: balanced cat-to-cushion ratio + sharper mobile rendering. */
 .cat-zone{
   width:min(190px,58%)!important;
   top:54.2%!important;
@@ -11,12 +11,14 @@
   max-width:100%!important;
   height:auto;
   margin:0 auto;
+  object-fit:contain;
   user-select:none;
   -webkit-user-drag:none;
   transform:none!important;
   image-rendering:auto;
+  image-rendering:-webkit-optimize-contrast;
   backface-visibility:hidden;
-  filter:drop-shadow(0 12px 15px rgba(76,56,40,.16));
+  filter:contrast(1.035) saturate(1.015) drop-shadow(0 8px 10px rgba(76,56,40,.11));
 }
 /* Sleeping pose is naturally wider; keep it broad enough to sit in the middle of the cushion. */
 .cat-wrap.state-sleep .cat-img{width:97%!important;max-width:97%!important}
