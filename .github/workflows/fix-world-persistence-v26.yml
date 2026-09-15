@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'Install world persistence fix v26'
+    if: github.event.head_commit.message == 'Run world persistence fix v26'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,6 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          # 1) Make unlocks permanent and recover missing equipped state.
           p=Path('cozy-world.js')
           s=p.read_text(encoding='utf-8')
           old="""function progressFor(item){if(item.kind==='words')return learningSeen();if(item.kind==='streak')return getNum('cozy10CheckinStreak',0);if(item.kind==='reviews')return metrics().reviewDays.length;return 0}
@@ -52,7 +51,6 @@ function saveEquipped(list){localStorage.setItem(EQUIPPED_KEY,JSON.stringify([..
           s=s.replace(old,new,1)
           p.write_text(s,encoding='utf-8')
 
-          # 2) Put collectible state inside the master save/export and recover it if those keys ever disappear.
           p=Path('save-guard.js')
           s=p.read_text(encoding='utf-8')
           old='''    save.needs=parse(localStorage.getItem("cozy11Needs"),null);save.sleeping=localStorage.getItem("cozy11CatSleeping")==="1";
@@ -82,7 +80,6 @@ function saveEquipped(list){localStorage.setItem(EQUIPPED_KEY,JSON.stringify([..
           s=s.replace(old,new,1)
           p.write_text(s,encoding='utf-8')
 
-          # 3) Cache bust all relevant entry points.
           p=Path('app.js');s=p.read_text(encoding='utf-8')
           if "import('./cozy-world.js?v=1')" not in s: raise SystemExit('cozy-world import target not found')
           p.write_text(s.replace("import('./cozy-world.js?v=1')","import('./cozy-world.js?v=2')",1),encoding='utf-8')
