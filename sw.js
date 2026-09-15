@@ -1,7 +1,7 @@
-const CACHE = "cozy-cat-cute-v26";
+const CACHE = "cozy-cat-cute-v27";
 const ASSETS = [
   "./", "./index.html", "./style.css", "./app.js", "./app-core.js", "./words.js", "./save-guard.js", "./legacy.html",
-  "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./cat-anim.js", "./cat-anim.css", "./cozy-world.js?v=2", "./cozy-world.css", "./cat-moments.js?v=1",
+  "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./cat-anim.js", "./cat-anim.css", "./study-prep.js?v=1", "./study-library.js?v=1", "./cozy-world.js?v=2", "./cozy-world.css", "./cat-moments.js?v=1",
   "./assets/cat-idle.avif", "./assets/cat-happy.avif", "./assets/cat-hungry.avif",
   "./assets/cat-sleep.avif", "./assets/cat-eat.avif", "./assets/cat-celebrate.avif"
 ];
