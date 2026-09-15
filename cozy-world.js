@@ -48,8 +48,13 @@ function learningSeen(){const x=parse(localStorage.getItem('cozyLearningV4'),{})
 function metrics(){const m=parse(localStorage.getItem(METRICS_KEY),{})||{};m.reviewDays=Array.isArray(m.reviewDays)?m.reviewDays:[];return m}
 function saveMetrics(m){localStorage.setItem(METRICS_KEY,JSON.stringify(m))}
 function progressFor(item){if(item.kind==='words')return learningSeen();if(item.kind==='streak')return getNum('cozy10CheckinStreak',0);if(item.kind==='reviews')return metrics().reviewDays.length;return 0}
-function isUnlocked(item){return progressFor(item)>=item.need}
-function equipped(){const x=parse(localStorage.getItem(EQUIPPED_KEY),[]);return Array.isArray(x)?x.filter(id=>ITEMS.some(i=>i.id===id)):[]}
+function knownUnlocks(){const x=parse(localStorage.getItem(KNOWN_KEY),[]);return Array.isArray(x)?x.filter(id=>ITEMS.some(i=>i.id===id)):[]}
+function isUnlocked(item){return knownUnlocks().includes(item.id)||progressFor(item)>=item.need}
+function equipped(){
+  const raw=localStorage.getItem(EQUIPPED_KEY);
+  if(raw===null){const defaults=ITEMS.filter(isUnlocked).map(i=>i.id);saveEquipped(defaults);return defaults}
+  const x=parse(raw,[]);return Array.isArray(x)?x.filter(id=>ITEMS.some(i=>i.id===id)):[]
+}
 function saveEquipped(list){localStorage.setItem(EQUIPPED_KEY,JSON.stringify([...new Set(list)]))}
 function toast(text){const el=$('#toast');if(!el)return;el.textContent=text;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2200)}
 function decorFor(item){const d=document.createElement('div');d.className='world-decor';d.dataset.item=item.id;d.textContent=item.emoji;d.setAttribute('aria-hidden','true');return d}
@@ -72,9 +77,9 @@ function renderCollection(){
   const eq=equipped(),unlockedIds=ITEMS.filter(isUnlocked).map(i=>i.id);maybeUnlockNotice(unlockedIds);
   grid.innerHTML='';
   for(const item of ITEMS){
-    const p=progressFor(item),open=p>=item.need,on=eq.includes(item.id);
+    const p=progressFor(item),open=isUnlocked(item),on=eq.includes(item.id),progressText=open&&p<item.need?'已永久解锁':`${Math.min(p,item.need)} / ${item.need}`;
     const card=document.createElement('div');card.className='world-collect-card'+(open?' is-open':' is-locked');
-    card.innerHTML=`<div class="world-collect-emoji">${open?item.emoji:'🔒'}</div><div class="world-collect-name">${open?item.name:'???'}</div><div class="world-collect-rule">${item.rule}</div><div class="world-collect-progress">${Math.min(p,item.need)} / ${item.need}</div><button type="button" ${open?'':'disabled'}>${open?(on?'收起来':'放进猫窝'):'还没解锁'}</button>`;
+    card.innerHTML=`<div class="world-collect-emoji">${open?item.emoji:'🔒'}</div><div class="world-collect-name">${open?item.name:'???'}</div><div class="world-collect-rule">${item.rule}</div><div class="world-collect-progress">${progressText}</div><button type="button" ${open?'':'disabled'}>${open?(on?'收起来':'放进猫窝'):'还没解锁'}</button>`;
     const btn=card.querySelector('button');if(open)btn.addEventListener('click',()=>{let list=equipped();list=on?list.filter(x=>x!==item.id):[...list,item.id];saveEquipped(list);renderCollection();renderRoomDecor();toast(on?`${item.name}收好啦`:`${item.name}已经放进猫窝 ♡`)});
     grid.appendChild(card);
   }
