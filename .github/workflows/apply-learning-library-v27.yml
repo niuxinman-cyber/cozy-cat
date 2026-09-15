@@ -1,0 +1,165 @@
+name: Apply learning library v27
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-learning-library-v27.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch learning flow
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace1(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'{label} not found')
+              return text.replace(old, new, 1)
+
+          p=Path('app-core.js')
+          s=p.read_text(encoding='utf-8')
+
+          s=replace1(s,
+          """const learning=loadLearning();
+const todayData=()=>learning.daily[dayKey()];""",
+          """const learning=loadLearning();
+function repairMissingReviews(){
+  const missing=learning.seen.filter(id=>WORDS.some(w=>w.id===id)&&!learning.reviews[id]);
+  if(!missing.length)return;
+  missing.forEach((id,i)=>{learning.reviews[id]={stage:0,correct:0,wrong:0,due:offset(1+Math.floor(i/10))}});
+  localStorage.setItem('cozyLearningV4',JSON.stringify(learning));
+}
+repairMissingReviews();
+const todayData=()=>learning.daily[dayKey()];""",
+          'learning repair insert')
+
+          s=replace1(s,
+          """function batchWords(batch=currentBatch()){
+  const shuffled=seededShuffle(WORDS,dayKey());
+  const start=((batch-1)*20)%shuffled.length;
+  const result=[];for(let i=0;i<20;i++) result.push(shuffled[(start+i)%shuffled.length]);
+  return result;
+}""",
+          """function batchWords(batch=currentBatch()){
+  const d=todayData();d.wordIds ||= {};const key=String(batch);
+  let ids=Array.isArray(d.wordIds[key])?d.wordIds[key].filter(id=>WORDS.some(w=>w.id===id)):[];
+  if(ids.length!==20){
+    const learned=d.learned?.[key]||[],claimed=d.claimed?.[key]||[],tested=Array.isArray(d.tested)&&d.tested.includes(batch);
+    let chosen=[];
+    if(learned.length||claimed.length||tested){
+      const shuffled=seededShuffle(WORDS,dayKey()),start=((batch-1)*20)%shuffled.length;
+      for(let i=0;i<20;i++)chosen.push(shuffled[(start+i)%shuffled.length]);
+    }else{
+      const seen=new Set(learning.seen);
+      const unseen=seededShuffle(WORDS.filter(w=>!seen.has(w.id)),`${dayKey()}:${batch}:unseen`);
+      const familiar=seededShuffle(WORDS.filter(w=>seen.has(w.id)),`${dayKey()}:${batch}:familiar`);
+      chosen=[...unseen,...familiar].slice(0,20);
+    }
+    ids=chosen.map(w=>w.id);d.wordIds[key]=ids;
+    localStorage.setItem('cozyLearningV4',JSON.stringify(learning));
+  }
+  return ids.map(id=>WORDS.find(w=>w.id===id)).filter(Boolean);
+}""",
+          'daily unseen batch')
+
+          marker="function installStudyTools(){\n"
+          wordbook="""function wordbookStatus(id){
+  const r=learning.reviews[id];
+  if(!r||!r.due)return'已学习 · 等待复习安排';
+  const stage=Math.max(0,Number(r.stage)||0)+1;
+  if(r.due<=dayKey())return`今天该复习 · 记忆阶段 ${stage}`;
+  const parts=String(r.due).split('-');
+  return`下次复习 ${Number(parts[1])}月${Number(parts[2])}日 · 记忆阶段 ${stage}`;
+}
+function renderWordbook(query=''){
+  const list=$('#wordbookList');if(!list)return;
+  const all=learning.seen.map(id=>WORDS.find(w=>w.id===id)).filter(Boolean).reverse();
+  const q=String(query||'').trim().toLowerCase();
+  const shown=q?all.filter(w=>`${w.w} ${w.m} ${w.topic} ${w.ex}`.toLowerCase().includes(q)):all;
+  const count=$('#wordbookCountText');if(count)count.textContent=`已学 ${all.length} 个 · 当前显示 ${shown.length} 个`;
+  list.innerHTML=shown.length?shown.map(w=>`<div class="word-card" style="display:block;margin-bottom:10px"><div class="word-main"><div class="de">${w.w}</div><div class="cn">${w.m}</div><div class="meta2">${w.topic} · ${w.ex}</div><div class="helper" style="margin-top:7px;font-size:11px">${wordbookStatus(w.id)}</div></div></div>`).join(''):'<div class="center-note" style="padding:24px 8px">还没有找到对应的单词～</div>';
+}
+function installWordbook(){
+  if($('#wordbookOverlay'))return;
+  const o=document.createElement('div');o.id='wordbookOverlay';o.className='overlay';
+  o.innerHTML=`<div class="sheet"><div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title">📚 我的已学词库</div><button class="close" id="closeWordbookBtn" type="button">✕</button></div><div class="helper" id="wordbookCountText" style="margin-bottom:10px"></div><input id="wordbookSearch" type="search" placeholder="搜索德语、中文、主题或例句" style="box-sizing:border-box;width:100%;border:1px solid #e7d8ca;border-radius:14px;padding:12px 14px;background:#fffaf5;color:#5f4b3e;font:inherit;outline:none;margin-bottom:12px"><div id="wordbookList" style="max-height:58vh;overflow:auto;padding-right:2px"></div></div>`;
+  document.body.appendChild(o);
+  $('#closeWordbookBtn').addEventListener('click',()=>o.classList.remove('show'));
+  $('#wordbookSearch').addEventListener('input',e=>renderWordbook(e.target.value));
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')});
+}
+function openWordbook(){installWordbook();const input=$('#wordbookSearch');if(input)input.value='';renderWordbook();$('#wordbookOverlay').classList.add('show')}
+function installStudyTools(){
+"""
+          if marker not in s: raise SystemExit('study tools marker not found')
+          s=s.replace(marker,wordbook,1)
+
+          s=replace1(s,
+          """  const helper=title?.nextElementSibling; if(helper) helper.textContent='每组 20 个新词；完成小测后可以继续下一组。旧词会按节奏回来复习。♡';""",
+          """  const helper=title?.nextElementSibling; if(helper) helper.textContent='今日新词每天更新，并优先给你没见过的词；到期旧词去「今日复习」，所有学过的词都会一直留在「已学词库」。♡';""",
+          'study helper')
+
+          s=replace1(s,
+          """    const box=document.createElement('div');box.id='studyTools';box.innerHTML=`<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0\"><button id=\"newWordsTab\" class=\"subbtn checkin-btn\" type=\"button\" style=\"margin:0\">📘 第 <span id=\"batchNum\">1</span> 组新词</button><button id=\"reviewBtn\" class=\"subbtn event-btn\" type=\"button\" style=\"margin:0\">🧠 今日复习 <span id=\"reviewCount\">0</span></button></div><div id=\"batchNote\" class=\"helper\" style=\"margin-bottom:10px\"></div>`;
+    const prog=page.querySelector('.progress');page.insertBefore(box,prog);
+    $('#reviewBtn').addEventListener('click',()=>startQuiz('review'));""",
+          """    const box=document.createElement('div');box.id='studyTools';box.innerHTML=`<div style=\"display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0\"><button id=\"newWordsTab\" class=\"subbtn checkin-btn\" type=\"button\" style=\"margin:0;padding:10px 6px\">📘 今日新词<br><span style=\"font-size:11px;opacity:.78\">第 <span id=\"batchNum\">1</span> 组</span></button><button id=\"reviewBtn\" class=\"subbtn event-btn\" type=\"button\" style=\"margin:0;padding:10px 6px\">🧠 今日复习<br><span style=\"font-size:11px;opacity:.78\"><span id=\"reviewCount\">0</span> 个到期</span></button><button id=\"wordbookBtn\" class=\"subbtn\" type=\"button\" style=\"margin:0;padding:10px 6px;background:#efe7dd;color:#654f41\">📚 已学词库<br><span style=\"font-size:11px;opacity:.78\"><span id=\"seenCount\">0</span> 个</span></button></div><div id=\"batchNote\" class=\"helper\" style=\"margin-bottom:10px\"></div>`;
+    const prog=page.querySelector('.progress');page.insertBefore(box,prog);
+    $('#reviewBtn').addEventListener('click',()=>startQuiz('review'));
+    $('#wordbookBtn').addEventListener('click',openWordbook);
+    $('#newWordsTab').addEventListener('click',()=>$('#wordList')?.scrollIntoView({behavior:'smooth',block:'start'}));""",
+          'study tools buttons')
+
+          s=replace1(s,
+          """  $('#batchNum').textContent=currentBatch();$('#reviewCount').textContent=dueReviews().length;$('#batchNote').textContent=`词库 ${WORDS.length} 词 · 今天第 ${currentBatch()} 组 · 已累计见过 ${learning.seen.length} 个不同单词`;""",
+          """  $('#batchNum').textContent=currentBatch();$('#reviewCount').textContent=dueReviews().length;const sc=$('#seenCount');if(sc)sc.textContent=learning.seen.length;$('#batchNote').textContent=`词库 ${WORDS.length} 词 · 今天第 ${currentBatch()} 组 · 新词优先不重复 · 已累计学习 ${learning.seen.length} 个不同单词`;""",
+          'study counters')
+
+          s=replace1(s,
+          """function toggle(i){const learned=currentLearned();const p=learned.indexOf(i);if(p>=0)learned.splice(p,1);else{learned.push(i);const id=currentWords()[i]?.id;if(id&&!learning.seen.includes(id))learning.seen.push(id)}state.mood=clamp(state.mood+.8);""",
+          """function toggle(i){const learned=currentLearned();const p=learned.indexOf(i);if(p>=0)learned.splice(p,1);else{learned.push(i);const id=currentWords()[i]?.id;if(id&&!learning.seen.includes(id)){learning.seen.push(id);learning.reviews[id] ||= {stage:0,correct:0,wrong:0,due:offset(1)}}state.mood=clamp(state.mood+.8);""",
+          'new word review schedule')
+
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('app.js');s=p.read_text(encoding='utf-8')
+          s=replace1(s,"import('./app-core.js?v=25')","import('./app-core.js?v=26')",'app core cache bust')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('sw.js');s=p.read_text(encoding='utf-8')
+          s=replace1(s,'const CACHE = "cozy-cat-cute-v26";','const CACHE = "cozy-cat-cute-v27";','service worker cache')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('index.html');s=p.read_text(encoding='utf-8')
+          s=replace1(s,'<script src="app.js?v=8" defer></script>','<script src="app.js?v=9" defer></script>','index app cache bust')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Verify JavaScript and patch
+        run: |
+          node --check app-core.js
+          node --check app.js
+          node --check sw.js
+          grep -q "function repairMissingReviews" app-core.js
+          grep -q "我的已学词库" app-core.js
+          grep -q "新词优先不重复" app-core.js
+          grep -q "app-core.js?v=26" app.js
+          grep -q "cozy-cat-cute-v27" sw.js
+          grep -q "app.js?v=9" index.html
+      - name: Commit upgrade
+        run: |
+          rm -f .github/workflows/apply-learning-library-v27.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-core.js app.js sw.js index.html .github/workflows/apply-learning-library-v27.yml
+          git commit -m "Add daily new words and learned word library"
+          git push
